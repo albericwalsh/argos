@@ -24,6 +24,7 @@ CORS_HEADERS = []
 COMMANDS_REGISTERY = []
 
 MODULES_REGISTERY = []
+WORKFLOWS_REGISTERY = []
 
 def init_app_variables(app_dir):
     '''Initialise les variables de l'application.'''

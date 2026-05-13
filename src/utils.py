@@ -1,6 +1,8 @@
 import json
 import yaml
 
+from src.variables import MODULES_REGISTERY
+
 
 def open_file(file_path, mode='r'):
     """Ouvre un fichier selon son extension."""
@@ -46,3 +48,11 @@ def delete_parameters(args):
     if isinstance(args, tuple):
         args = [item for sublist in args for item in (sublist if isinstance(sublist, list) else [sublist])]
     return [arg for arg in args if not isinstance(arg, str) or not arg.startswith((" /"))]
+
+
+def get_modules(id):
+    for module in MODULES_REGISTERY:
+        if module.id == id:
+            return module
+    print(f"No modume with id {id}")
+    return None
