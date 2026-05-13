@@ -200,7 +200,7 @@
     <!-- ── 5. CORS ──────────────────────────────── -->
     <section id="cors">
       <h2>CORS — Cross-Origin Resource Sharing</h2>
-      <p>Le CORS permet à un front servi sur un autre domaine/port (ex : React sur :3000) d'appeler ton API Flask (:5000). Sans CORS, le navigateur bloque la requête.</p>
+      <p>Le CORS permet à un front servi sur un autre domaine/port (ex : React sur :3000) d'appeler ton API Flask (:8080). Sans CORS, le navigateur bloque la requête.</p>
 
       <div style="margin-top:1rem">
         <table>
@@ -212,7 +212,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr><td>Access-Control-Allow-Origin</td>  <td>Domaines autorisés</td>      <td>localhost:3000, :5000</td></tr>
+            <tr><td>Access-Control-Allow-Origin</td>  <td>Domaines autorisés</td>      <td>localhost::8080</td></tr>
             <tr><td>Access-Control-Allow-Methods</td> <td>Méthodes HTTP permises</td>  <td>GET, POST, PUT, DELETE, OPTIONS</td></tr>
             <tr><td>Access-Control-Allow-Headers</td> <td>Headers acceptés</td>        <td>Content-Type, Authorization</td></tr>
           </tbody>
@@ -224,7 +224,7 @@
           <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
           <span>variables.py</span>
         </div>
-        <pre><span class="var">CORS_ORIGINS</span> = [<span class="str">"http://localhost:3000"</span>, <span class="str">"http://localhost:5000"</span>]
+        <pre><span class="var">CORS_ORIGINS</span> = [<span class="str">"http://localhost:8080"</span>]
 <span class="var">CORS_METHODS</span> = [<span class="str">"GET"</span>, <span class="str">"POST"</span>, <span class="str">"PUT"</span>, <span class="str">"DELETE"</span>, <span class="str">"OPTIONS"</span>]
 <span class="var">CORS_HEADERS</span> = [<span class="str">"Content-Type"</span>, <span class="str">"Authorization"</span>]</pre>
       </div>
