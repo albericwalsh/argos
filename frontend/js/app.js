@@ -7,7 +7,9 @@ const modules = {
     { name: 'threads', label: 'Threads', type: 'number', placeholder: '40', min:1 },
     { name: 'extensions', label: 'Extensions (csv)', type: 'text', placeholder: 'php,html,txt' }
   ] },
-  workflows: { title: 'Workflows', desc: 'Exécutions prédéfinies.' }
+  workflows: { title: 'Workflows', desc: 'Exécutions prédéfinies.', options: [
+    { name: 'workflow', label: 'Workflow', type: 'text', placeholder: 'quick ou enum' }
+  ] }
 };
 
 const workflows = {
@@ -58,8 +60,45 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
   }
 
+  function transitionToModule(key){
+    const wrapper = document.querySelector('.modules-wrapper');
+    if(!wrapper || !app || !app.classList.contains('started')) return;
+
+    // Inline styles override all CSS cascade (specificity 1-0-0) — guaranteed to work
+    wrapper.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+    wrapper.style.opacity = '0';
+    wrapper.style.transform = 'translate3d(0,8px,0)';
+
+    setTimeout(()=>{
+      activateModuleByKey(key);
+
+      // Lock at 0 without transition so fade-in starts cleanly from 0
+      wrapper.style.transition = 'none';
+      void wrapper.offsetHeight; // force reflow
+      wrapper.style.transition = 'opacity 0.3s ease 0.04s, transform 0.3s ease 0.04s';
+      wrapper.style.opacity = '1';
+      wrapper.style.transform = 'translate3d(0,0,0)';
+
+      try{ window.scrollTo({ top: 0, behavior: 'auto' }); }catch(e){ document.documentElement.scrollTop = 0; }
+
+      // Remove inline styles after fade-in so CSS stays in control
+      setTimeout(()=>{
+        wrapper.style.transition = '';
+        wrapper.style.opacity = '';
+        wrapper.style.transform = '';
+      }, 380);
+    }, 260);
+  }
+
+  function clearWrapperInlineStyles(){
+    const wrapper = document.querySelector('.modules-wrapper');
+    if(wrapper){ wrapper.style.transition = ''; wrapper.style.opacity = ''; wrapper.style.transform = ''; }
+  }
+
   navItems.forEach(it=>it.addEventListener('click', ()=>{
     const key = it.dataset.module;
+    if(!key) return;
+
     // Home handling: hide modules and show hero
     if(key === 'home'){
       navItems.forEach(n=>n.classList.remove('active'));
@@ -67,6 +106,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
       // cancel pending start timers
       if(_startTimerA) { clearTimeout(_startTimerA); _startTimerA = null; }
       if(_startTimerB) { clearTimeout(_startTimerB); _startTimerB = null; }
+      // clean up any lingering inline styles so CSS entrance animation works on re-entry
+      clearWrapperInlineStyles();
       // show hero again and play reverse animation smoothly
       if(app){
         app.classList.remove('hero-hidden');
@@ -78,10 +119,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
       return;
     }
 
-    // Module click: if already started, activate immediately, else run start sequence then activate
+    // Module click: decide whether to do full start or just transition
+    // Show active state immediately for feedback
+    navItems.forEach(n=>n.classList.remove('active'));
+    it.classList.add('active');
+
     if(app && app.classList.contains('started')){
-      activateModuleByKey(key);
+      // UI already open, just transition to this module
+      transitionToModule(key);
     } else {
+      // UI not open yet, do full open sequence with this module
       startSequence(key);
     }
   }));
@@ -96,10 +143,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
       // trigger animations shortly after to allow CSS transitions
       setTimeout(()=>{
         if(app) app.classList.add('started');
-        // activate first module
+        // activate first module directly — do NOT call .click() here since started is already
+        // true and click() would trigger transitionToModule instead of the CSS entrance animation
         const firstModule = Array.from(navItems).find(n=>n.dataset.module && n.dataset.module!=='home');
-        if(firstModule){ firstModule.click(); }
-        // focus target input
+        if(firstModule){
+          navItems.forEach(n=>n.classList.remove('active'));
+          firstModule.classList.add('active');
+          activateModuleByKey(firstModule.dataset.module);
+        }
         const tgt = document.getElementById('target'); if(tgt) tgt.focus();
       }, 30);
 

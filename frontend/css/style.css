@@ -68,6 +68,10 @@ html,body{height:100%;margin:0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-
 	.app.transitioning .hero{ left:0; width:100%; }
 }
 
+/* Tab switch animation: fade + small slide for nicer module changes */
+.modules-wrapper.swap-out{opacity:0;transform:translate3d(0,8px,0);transition:opacity .28s cubic-bezier(.2,.8,.2,1), transform .28s cubic-bezier(.2,.8,.2,1)}
+.modules-wrapper.swap-in{opacity:1;transform:none;transition:opacity .32s cubic-bezier(.2,.8,.2,1) .05s, transform .32s cubic-bezier(.2,.8,.2,1) .05s}
+
 /* When not started, keep hero full height visual and center content */
 .app:not(.started) .hero{min-height:100vh;padding:40px 20px;display:flex;align-items:center}
 .app:not(.started) .hero .hero-inner{height:100%;justify-content:center;padding-top:30px}
