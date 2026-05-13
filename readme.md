@@ -2,7 +2,7 @@
 ## Installation ##
 ```bash
 python -m venv argos_env
-source argos_env/bin/activate  # On Windows: argos_env\Scripts\activate
+argos_env\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 ## Usage ##
