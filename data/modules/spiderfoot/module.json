@@ -1,0 +1,22 @@
+{
+    "id": "spiderfoot",
+    "name": "SpiderFoot",
+    "category": "Intelligence Gathering",
+    "description": "SpiderFoot est un outil d'exploration de l'Internet utilisé pour collecter des informations sur une cible donnée. Il permet de découvrir des informations sensibles telles que les adresses IP, les noms de domaine, les comptes sur les réseaux sociaux, etc.",
+    "parameters": [
+        {
+            "name": "target",
+            "type": "string",
+            "description": "L'adresse IP, le nom de domaine ou l'identifiant de la cible à explorer."
+        },
+        {
+            "name": "options",
+            "type": "string",
+            "description": "Les options de ligne de commande pour personnaliser l'exploration (par exemple, les modules à utiliser, les types d'informations à collecter, etc.)."
+        }
+    ],
+    "output": {
+        "type": "string",
+        "description": "Le résultat de l'exploration SpiderFoot, généralement au format texte ou JSON."
+    }
+}
