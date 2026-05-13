@@ -1,241 +1,77 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ APP_NAME }} — v{{ APP_VERSION }}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Argos - Pentest Toolbox</title>
+  <link rel="stylesheet" href="static/style.css">
+  <meta name="description" content="Interface front-end pour Argos - boîte à outils pentest" />
 </head>
 <body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">ARGOS</div>
+      <nav>
+        <ul>
+          <li data-module="home" id="nav-home" class="active">Accueil</li>
+          <li data-module="nmap">Nmap</li>
+          <li data-module="ffuf">FFUF</li>
+          <li data-module="workflows">Workflows</li>
+        </ul>
+      </nav>
+      <div class="footer">Boîte à outils Pentest</div>
+    </aside>
 
-<div class="layout">
-
-  <!-- ── Sidebar ─────────────────────────────────── -->
-  <aside class="sidebar">
-    <div>
-      <div class="sidebar-brand">
-        {{ APP_NAME }}
-        <span>v{{ APP_VERSION }}</span>
-      </div>
-    </div>
-
-    <nav class="nav">
-      <div class="nav-section">Guide dev</div>
-      <a href="#variables"  class="active">Variables Jinja2</a>
-      <a href="#conditions">Conditions & boucles</a>
-      <a href="#static">Fichiers statiques</a>
-      <a href="#fetch">Fetch API</a>
-      <a href="#cors">CORS</a>
-    </nav>
-
-    <div class="badge-row">
-      <span class="badge ok">Flask running</span>
-      <span class="badge">{{ WEB_SERVER_HOST }}:{{ WEB_SERVER_PORT }}</span>
-    </div>
-  </aside>
-
-  <!-- ── Main ────────────────────────────────────── -->
-  <main>
-
-    <div class="hero">
-      <h1>Dev guide<br><em>Flask × Jinja2</em></h1>
-      <p>Tout ce qu'il faut savoir pour développer le front de ce serveur.</p>
-    </div>
-
-    <!-- Info cards -->
-    <div class="info-grid">
-      <div class="info-card">
-        <div class="label">App</div>
-        <div class="value">{{ APP_NAME }}</div>
-      </div>
-      <div class="info-card">
-        <div class="label">Version</div>
-        <div class="value">{{ APP_VERSION }}</div>
-      </div>
-      <div class="info-card">
-        <div class="label">Host</div>
-        <div class="value">{{ WEB_SERVER_HOST }}</div>
-      </div>
-      <div class="info-card">
-        <div class="label">Port</div>
-        <div class="value">{{ WEB_SERVER_PORT }}</div>
-      </div>
-    </div>
-
-    <!-- ── 1. Variables ─────────────────────────── -->
-    <section id="variables">
-      <h2>Variables Jinja2</h2>
-      <p>Flask passe des variables Python au template via <code>render_template()</code>. Dans le HTML, on les affiche avec la syntaxe <code>{{ '{{' }} variable {{ '}}' }}</code>.</p>
-
-      <div class="code-block" style="margin-top:1rem">
-        <div class="code-block-header">
-          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
-          <span>app.py</span>
+    <main class="main">
+      <section class="hero" id="hero">
+        <div class="hero-inner">
+          <div class="hero-title">ARGOS</div>
+          <div class="hero-sub">Boîte à outils Pentest</div>
+          <button id="start-btn" class="hero-cta">Commencer</button>
         </div>
-        <pre><span class="kw">return</span> <span class="fn">render_template</span>(<span class="str">'index.html'</span>,
-    APP_NAME    = APP_NAME,
-    APP_VERSION = APP_VERSION,
-    WEB_SERVER_HOST = WEB_SERVER_HOST,
-    WEB_SERVER_PORT = WEB_SERVER_PORT,
-)</pre>
-      </div>
+      </section>
 
-      <div class="code-block" style="margin-top:.75rem">
-        <div class="code-block-header">
-          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
-          <span>index.html</span>
+      <div class="modules-wrapper">
+        <header>
+        <h1 id="title">Nmap</h1>
+        <div class="controls">
+          <input id="target" placeholder="ex: example.com ou 10.0.0.1" />
+          <button id="run">Run</button>
         </div>
-        <pre><span class="tag">&lt;h1&gt;</span>{{ '{{' }} APP_NAME {{ '}}' }}<span class="tag">&lt;/h1&gt;</span>
-<span class="tag">&lt;p&gt;</span>Version : {{ '{{' }} APP_VERSION {{ '}}' }}<span class="tag">&lt;/p&gt;</span></pre>
-      </div>
+      </header>
 
-      <div class="callout">
-        <strong>Valeur injectée en live :</strong> cette page affiche <strong>{{ APP_NAME }} v{{ APP_VERSION }}</strong> — ces valeurs viennent de Python.
-      </div>
-    </section>
-
-    <!-- ── 2. Conditions & boucles ──────────────── -->
-    <section id="conditions">
-      <h2>Conditions &amp; boucles</h2>
-      <p>Jinja2 supporte <code>{{ '{% ' }}if{{ ' %}' }}</code> et <code>{{ '{% ' }}for{{ ' %}' }}</code> pour du HTML dynamique.</p>
-
-      <div class="code-block" style="margin-top:1rem">
-        <div class="code-block-header">
-          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
-          <span>Condition</span>
+      <section class="content" id="content">
+        <div class="pane left">
+          <div class="card" id="card-desc">Bienvenue dans Argos UI — sélectionnez un module.</div>
+          <pre class="output" id="output">Prêt. Sélectionnez un module et lancez une commande.</pre>
         </div>
-        <pre><span class="cm">{{ '{#' }} Afficher un bloc selon une variable {{ '#}' }}</span>
-<span class="kw">{{ '{% ' }}if</span> APP_VERSION == <span class="str">'1.0.0'</span> <span class="kw">{{ '%}' }}</span>
-  <span class="tag">&lt;p&gt;</span>Première release !<span class="tag">&lt;/p&gt;</span>
-<span class="kw">{{ '{% ' }}else{{ ' %}' }}</span>
-  <span class="tag">&lt;p&gt;</span>Version {{ '{{' }} APP_VERSION {{ '}}' }}<span class="tag">&lt;/p&gt;</span>
-<span class="kw">{{ '{% ' }}endif{{ ' %}' }}</span></pre>
-      </div>
 
-      <div class="code-block" style="margin-top:.75rem">
-        <div class="code-block-header">
-          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
-          <span>Boucle — app.py passe une liste</span>
-        </div>
-        <pre><span class="cm"># app.py</span>
-<span class="kw">return</span> <span class="fn">render_template</span>(<span class="str">'index.html'</span>, items=[<span class="str">'a'</span>, <span class="str">'b'</span>, <span class="str">'c'</span>])
+        <aside class="pane right" id="panel">
+          <h3>Configuration</h3>
+          <form id="config-form">
+            <div id="config-fields">Choisissez un module pour voir les options.</div>
+            <div class="form-row">
+              <label>Wordlist (optionnel)</label>
+              <input type="file" id="wordlist" accept=".txt" />
+              <div id="wordlist-name" class="muted">Aucune sélection</div>
+            </div>
+            <div class="form-row actions">
+              <button type="button" id="run2">Run</button>
+              <button type="button" id="stop" disabled>Stop</button>
+            </div>
+          </form>
 
-<span class="cm">{{ '{#' }} index.html {{ '#}' }}</span>
-<span class="tag">&lt;ul&gt;</span>
-<span class="kw">{{ '{% ' }}for</span> item <span class="kw">in</span> items <span class="kw">{{ '%}' }}</span>
-  <span class="tag">&lt;li&gt;</span>{{ '{{' }} item {{ '}}' }}<span class="tag">&lt;/li&gt;</span>
-<span class="kw">{{ '{% ' }}endfor{{ ' %}' }}</span>
-<span class="tag">&lt;/ul&gt;</span></pre>
-      </div>
-    </section>
+          <hr />
+          <h4>Workflows</h4>
+          <ul id="workflows-list" class="workflows">
+            <li data-workflow="quick">Quick scan (Nmap + top ports)</li>
+            <li data-workflow="enum">Enumeration (nmap + ffuf)</li>
+          </ul>
+        </aside>
+      </section>
+    </main>
+  </div>
 
-    <!-- ── 3. Static files ──────────────────────── -->
-    <section id="static">
-      <h2>Fichiers statiques (CSS / JS / images)</h2>
-      <p>Flask sert automatiquement le dossier <code>static/</code>. Utilise <code>url_for</code> pour construire les URLs.</p>
-
-      <div class="code-block" style="margin-top:1rem">
-        <div class="code-block-header">
-          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
-          <span>Structure</span>
-        </div>
-        <pre>project/
-├── app.py
-├── templates/
-│   └── index.html
-└── static/
-    ├── style.css
-    ├── app.js
-    └── logo.png</pre>
-      </div>
-
-      <div class="code-block" style="margin-top:.75rem">
-        <div class="code-block-header">
-          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
-          <span>index.html — lier les assets</span>
-        </div>
-        <pre><span class="tag">&lt;link</span> <span class="at">rel</span>=<span class="str">"stylesheet"</span> <span class="at">href</span>=<span class="str">"{{ '{{' }} url_for('static', filename='style.css') {{ '}}' }}"</span><span class="tag">&gt;</span>
-<span class="tag">&lt;script</span> <span class="at">src</span>=<span class="str">"{{ '{{' }} url_for('static', filename='app.js') {{ '}}' }}"</span><span class="tag">&gt;&lt;/script&gt;</span></pre>
-      </div>
-
-      <div class="callout">
-        <strong>Pourquoi <code>url_for</code> ?</strong> Il génère le bon chemin même si l'app est montée dans un sous-répertoire — ne jamais écrire <code>/static/...</code> en dur.
-      </div>
-    </section>
-
-    <!-- ── 4. Fetch API ─────────────────────────── -->
-    <section id="fetch">
-      <h2>Appels API depuis le front (Fetch)</h2>
-      <p>Pour rendre la page interactive sans recharger, utilise <code>fetch()</code> en JavaScript pour appeler tes routes Flask.</p>
-
-      <div class="code-block" style="margin-top:1rem">
-        <div class="code-block-header">
-          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
-          <span>app.py — route JSON</span>
-        </div>
-        <pre><span class="kw">from</span> flask <span class="kw">import</span> jsonify
-
-<span class="at">@app.route</span>(<span class="str">'/api/status'</span>)
-<span class="kw">def</span> <span class="fn">status</span>():
-    <span class="kw">return</span> <span class="fn">jsonify</span>({ <span class="str">'ok'</span>: <span class="kw">True</span>, <span class="str">'app'</span>: APP_NAME })</pre>
-      </div>
-
-      <div class="code-block" style="margin-top:.75rem">
-        <div class="code-block-header">
-          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
-          <span>static/app.js — appel fetch</span>
-        </div>
-        <pre><span class="kw">async function</span> <span class="fn">getStatus</span>() {
-  <span class="kw">const</span> <span class="var">res</span>  = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/api/status'</span>)
-  <span class="kw">const</span> <span class="var">data</span> = <span class="kw">await</span> <span class="var">res</span>.<span class="fn">json</span>()
-  console.<span class="fn">log</span>(<span class="var">data</span>.<span class="var">app</span>)  <span class="cm">// → "MyApp"</span>
-}
-
-<span class="fn">getStatus</span>()</pre>
-      </div>
-    </section>
-
-    <!-- ── 5. CORS ──────────────────────────────── -->
-    <section id="cors">
-      <h2>CORS — Cross-Origin Resource Sharing</h2>
-      <p>Le CORS permet à un front servi sur un autre domaine/port (ex : React sur :3000) d'appeler ton API Flask (:8080). Sans CORS, le navigateur bloque la requête.</p>
-
-      <div style="margin-top:1rem">
-        <table>
-          <thead>
-            <tr>
-              <th>Header HTTP</th>
-              <th>Rôle</th>
-              <th>Valeur par défaut ici</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Access-Control-Allow-Origin</td>  <td>Domaines autorisés</td>      <td>localhost::8080</td></tr>
-            <tr><td>Access-Control-Allow-Methods</td> <td>Méthodes HTTP permises</td>  <td>GET, POST, PUT, DELETE, OPTIONS</td></tr>
-            <tr><td>Access-Control-Allow-Headers</td> <td>Headers acceptés</td>        <td>Content-Type, Authorization</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="code-block" style="margin-top:1rem">
-        <div class="code-block-header">
-          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
-          <span>variables.py</span>
-        </div>
-        <pre><span class="var">CORS_ORIGINS</span> = [<span class="str">"http://localhost:8080"</span>]
-<span class="var">CORS_METHODS</span> = [<span class="str">"GET"</span>, <span class="str">"POST"</span>, <span class="str">"PUT"</span>, <span class="str">"DELETE"</span>, <span class="str">"OPTIONS"</span>]
-<span class="var">CORS_HEADERS</span> = [<span class="str">"Content-Type"</span>, <span class="str">"Authorization"</span>]</pre>
-      </div>
-
-      <div class="callout">
-        <strong>En production</strong> : remplace <code>localhost</code> par ton vrai domaine. N'utilise jamais <code>"*"</code> si tu envoies des credentials (cookies, Authorization header).
-      </div>
-    </section>
-
-  </main>
-</div>
-
+  <script src="static/app.js"></script>
 </body>
 </html>
