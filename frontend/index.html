@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Argos - Pentest Toolbox</title>
+  <link rel="stylesheet" href="css/style.css">
+  <meta name="description" content="Interface front-end pour Argos - boîte à outils pentest" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">ARGOS</div>
+      <nav>
+        <ul>
+          <li data-module="home" id="nav-home" class="active">Accueil</li>
+          <li data-module="nmap">Nmap</li>
+          <li data-module="ffuf">FFUF</li>
+          <li data-module="workflows">Workflows</li>
+        </ul>
+      </nav>
+      <div class="footer">Boîte à outils Pentest</div>
+    </aside>
+
+    <main class="main">
+      <section class="hero" id="hero">
+        <div class="hero-inner">
+          <div class="hero-title">ARGOS</div>
+          <div class="hero-sub">Boîte à outils Pentest</div>
+          <button id="start-btn" class="hero-cta">Commencer</button>
+        </div>
+      </section>
+
+      <div class="modules-wrapper">
+        <header>
+        <h1 id="title">Nmap</h1>
+        <div class="controls">
+          <input id="target" placeholder="ex: example.com ou 10.0.0.1" />
+          <button id="run">Run</button>
+        </div>
+      </header>
+
+      <section class="content" id="content">
+        <div class="pane left">
+          <div class="card" id="card-desc">Bienvenue dans Argos UI — sélectionnez un module.</div>
+          <pre class="output" id="output">Prêt. Sélectionnez un module et lancez une commande.</pre>
+        </div>
+
+        <aside class="pane right" id="panel">
+          <h3>Configuration</h3>
+          <form id="config-form">
+            <div id="config-fields">Choisissez un module pour voir les options.</div>
+            <div class="form-row">
+              <label>Wordlist (optionnel)</label>
+              <input type="file" id="wordlist" accept=".txt" />
+              <div id="wordlist-name" class="muted">Aucune sélection</div>
+            </div>
+            <div class="form-row actions">
+              <button type="button" id="run2">Run</button>
+              <button type="button" id="stop" disabled>Stop</button>
+            </div>
+          </form>
+
+          <hr />
+          <h4>Workflows</h4>
+          <ul id="workflows-list" class="workflows">
+            <li data-workflow="quick">Quick scan (Nmap + top ports)</li>
+            <li data-workflow="enum">Enumeration (nmap + ffuf)</li>
+          </ul>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
