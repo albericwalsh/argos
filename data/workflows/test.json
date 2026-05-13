@@ -1,0 +1,12 @@
+{
+    "id": "test_workflow",
+    "name": "Test Workflow",
+    "description": "Ceci est un workflow de test pour vérifier que tout fonctionne correctement.",
+    "steps": [
+        {
+            "name": "Étape 1",
+            "description": "Ceci est la première étape du workflow de test.",
+            "module": "nmap"
+        }
+    ]
+}
