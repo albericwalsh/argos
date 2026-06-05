@@ -1,23 +1,30 @@
+import time
+import sys
+from prompt_toolkit import prompt
+
+from src.core.completer import get_completer
 from src.core.cli_modules import banner
 from src.core.commands.help import HelpCommand
 from src.variables import COMMANDS_REGISTERY
-
 
 def cli_loop():
     '''Boucle principale du CLI.'''
 
     banner.print_banner()
 
+
+
     help_command = HelpCommand()
     help_command.execute()
 
     running = True
 
+    sys.stdout.flush()
+
     while running:
 
         try:
-
-            user_input = input("> ").strip()
+            user_input = prompt("\n> ", completer=get_completer()).strip()
 
             if not user_input:
                 continue

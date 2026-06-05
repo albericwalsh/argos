@@ -1,0 +1,6 @@
+{
+    "id": "debug_input",
+    "name": "Debug Input",
+    "category": "Debug",
+    "description": "Module de debug qui affiche ses inputs et retourne un dict structuré."
+}

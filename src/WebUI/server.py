@@ -1,8 +1,10 @@
 import os
+import sys
 
 from flask import Flask, render_template
 import logging
 from flask_cors import CORS
+import flask.cli as flask_cli
 import threading
 from src.variables import  (
     WEB_SERVER_HOST, WEB_SERVER_PORT,
@@ -41,14 +43,21 @@ def index():
 def start_web_server():
     global app, WEB_SERVER_HOST, WEB_SERVER_PORT
 
-    # Supprimer la bannière et les logs Flask
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.ERROR)  # seulement les erreurs
+    logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
+    devnull = open(os.devnull, 'w')
+    old_stdout = sys.stdout
+    sys.stdout = devnull
 
     thread = threading.Thread(
-        target=lambda: app.run(host=WEB_SERVER_HOST, port=WEB_SERVER_PORT),
+        target=lambda: app.run(host=WEB_SERVER_HOST, port=WEB_SERVER_PORT, use_reloader=False),
         daemon=True
     )
     thread.start()
+    thread.join(timeout=0.5)
+
+    sys.stdout = old_stdout  # <-- bien restauré avant le return
+    devnull.close()
+
     print(f"[WebUI] Server started on http://{WEB_SERVER_HOST}:{WEB_SERVER_PORT}")
     return True

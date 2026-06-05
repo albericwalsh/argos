@@ -1,0 +1,22 @@
+{
+    "id": "vuln_lookup",
+    "name": "Vulnerability Lookup",
+    "category": "Vulnerability Assessment",
+    "description": "Interroge l'API NVD (National Vulnerability Database) pour trouver les CVEs associées aux services et versions détectés par Nmap.",
+    "parameters": [
+        {
+            "name": "services",
+            "type": "list",
+            "description": "Liste de Service objects issus du module nmap."
+        },
+        {
+            "name": "severity_filter",
+            "type": "string",
+            "description": "Filtrer par sévérité minimale : LOW, MEDIUM, HIGH, CRITICAL. Défaut: MEDIUM"
+        }
+    ],
+    "output": {
+        "type": "list",
+        "description": "Liste de vulnérabilités trouvées avec CVE ID, score CVSS, description."
+    }
+}

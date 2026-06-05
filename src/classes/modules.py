@@ -19,7 +19,7 @@ class Module:
         self.name = module_file.get('name')
         self.category = module_file.get('category')
         self.description = module_file.get('description')
-
+        self.entry_arg = module_file.get('entry_arg')
         # Chargement dynamique du entry.py
         entry_path = os.path.join(directory, 'entry.py')
 
@@ -60,6 +60,6 @@ class Module:
     def execute(self, args=None):
 
         if args is None:
-            args = []
+            args = {}
 
         return self.entry(args)

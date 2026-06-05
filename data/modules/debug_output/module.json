@@ -1,0 +1,6 @@
+{
+    "id": "debug_output",
+    "name": "Debug Output",
+    "category": "Debug",
+    "description": "Module de debug qui consomme l'output du step précédent et l'affiche."
+}

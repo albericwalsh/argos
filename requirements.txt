@@ -2,3 +2,5 @@ pyyaml
 docker
 flask
 flask-cors
+pyreadline3
+prompt_toolkit

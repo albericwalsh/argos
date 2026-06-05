@@ -5,4 +5,4 @@ from src.variables import APP_DIR
 
 def print_banner():
     banner = src.utils.open_file(os.path.join(APP_DIR, 'banner.txt'))
-    print(banner)
+    print(banner, flush=True)

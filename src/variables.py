@@ -76,3 +76,11 @@ def register_command(command):
     '''Enregistre une commande dans le registre des commandes.'''
     if command.name not in COMMANDS_REGISTERY:
         COMMANDS_REGISTERY.append(command)
+
+    
+def get_modules(id):
+    for module in MODULES_REGISTERY:
+        if module.id == id:
+            return module
+    print(f"No modume with id {id}")
+    return None

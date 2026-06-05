@@ -9,4 +9,6 @@ def init_worflow_registery():
     '''Initialise le registre des workflows.'''
     modules_dir = os.path.join(APP_DIR, 'data/workflows')
     for filename in os.listdir(modules_dir):
-        WORKFLOWS_REGISTERY.append(Workflow(filename))
+        WORKFLOWS_REGISTERY.append(Workflow(os.path.join(modules_dir, filename)))
+    for w in WORKFLOWS_REGISTERY:
+        print(w.id)

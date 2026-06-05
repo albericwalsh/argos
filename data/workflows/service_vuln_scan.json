@@ -1,0 +1,30 @@
+{
+  "id": "service_vuln_scan",
+  "name": "Service & Vulnerability Scanner",
+  "description": "Scan les services puis cherche les CVEs associées",
+
+  "inputs": {
+    "target": "",
+    "severity_filter": "MEDIUM"
+  },
+
+  "steps": [
+    {
+      "id": "step1",
+      "module": "nmap",
+      "args": {
+        "target": "$inputs.target",
+        "options": ["-sV", "--version-intensity", "5"]
+      }
+    },
+    {
+      "id": "step2",
+      "module": "vuln_lookup",
+      "depends_on": ["step1"],
+      "args": {
+        "services": "$step1.output",
+        "severity_filter": "$inputs.severity_filter"
+      }
+    }
+  ]
+}
