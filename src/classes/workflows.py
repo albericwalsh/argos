@@ -10,7 +10,10 @@ class Workflow:
         self.results = {}  # stockage des résultats du dernier run
         self.load()
 
-
+    @property
+    def raw_steps(self):
+        return self.wf.get("steps", [])
+    
     def load(self):
         self.wf = open_file(self.path)
         self.id = self.wf.get("id")

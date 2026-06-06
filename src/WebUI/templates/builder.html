@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- ══════════════ PAGE : WORKFLOW BUILDER ══════════════ -->
+
+  <div class="page-header">
+    <div class="workflow-meta">
+      <input class="wf-name-input" type="text" placeholder="Nom du workflow…" value="recon-full" />
+      <span class="badge badge-pending">Brouillon</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost">Importer JSON</button>
+      <button class="btn btn-ghost">Prévisualiser</button>
+      <button class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+          <polyline points="17 21 17 13 7 13 7 21" />
+          <polyline points="7 3 7 8 15 8" />
+        </svg>
+        Sauvegarder
+      </button>
+    </div>
+  </div>
+
+  <div class="workflow-builder">
+
+    <!-- Palette modules -->
+    <div class="builder-palette">
+      <div class="builder-section-header">Modules disponibles</div>
+      <div class="palette-search">
+        <input type="text" placeholder="Rechercher un module…">
+      </div>
+      <div class="palette-modules">
+        <div class="palette-module" draggable="true">
+          <div class="pm-icon" style="background:rgba(0,229,160,.1);color:var(--accent)">NS</div>
+          <div class="pm-info">
+            <div class="pm-name">nslookup</div>
+            <div class="pm-type">recon</div>
+          </div>
+          <div class="pm-drag-handle">⠿</div>
+        </div>
+        <div class="palette-module" draggable="true">
+          <div class="pm-icon" style="background:rgba(0,153,255,.1);color:var(--accent2)">NM</div>
+          <div class="pm-info">
+            <div class="pm-name">nmap_scan</div>
+            <div class="pm-type">scan</div>
+          </div>
+          <div class="pm-drag-handle">⠿</div>
+        </div>
+        <div class="palette-module" draggable="true">
+          <div class="pm-icon" style="background:rgba(255,167,58,.1);color:var(--warn)">WH</div>
+          <div class="pm-info">
+            <div class="pm-name">whois</div>
+            <div class="pm-type">recon</div>
+          </div>
+          <div class="pm-drag-handle">⠿</div>
+        </div>
+        <div class="palette-module" draggable="true">
+          <div class="pm-icon" style="background:rgba(167,139,250,.1);color:#a78bfa">SB</div>
+          <div class="pm-info">
+            <div class="pm-name">subfinder</div>
+            <div class="pm-type">enum</div>
+          </div>
+          <div class="pm-drag-handle">⠿</div>
+        </div>
+        <div class="palette-module" draggable="true">
+          <div class="pm-icon" style="background:rgba(0,229,160,.1);color:var(--accent)">HT</div>
+          <div class="pm-info">
+            <div class="pm-name">httpx_probe</div>
+            <div class="pm-type">probe</div>
+          </div>
+          <div class="pm-drag-handle">⠿</div>
+        </div>
+        <div class="palette-module" draggable="true">
+          <div class="pm-icon" style="background:rgba(0,153,255,.1);color:var(--accent2)">RP</div>
+          <div class="pm-info">
+            <div class="pm-name">report_gen</div>
+            <div class="pm-type">output</div>
+          </div>
+          <div class="pm-drag-handle">⠿</div>
+        </div>
+        <div class="palette-module" draggable="true">
+          <div class="pm-icon" style="background:rgba(255,167,58,.1);color:var(--warn)">SS</div>
+          <div class="pm-info">
+            <div class="pm-name">screenshot</div>
+            <div class="pm-type">enum</div>
+          </div>
+          <div class="pm-drag-handle">⠿</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="builder-canvas">
+      <div class="canvas-toolbar">
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px">↩ Annuler</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px">↪ Refaire</button>
+        <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px">+ Étape</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px">⬡ Condition</button>
+        <div style="margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--muted)">
+          Glisser-déposer les modules depuis la palette
+        </div>
+      </div>
+      <div class="canvas-area" id="canvas-area">
+        <!-- Placeholder when empty -->
+        <div class="canvas-empty" id="canvas-empty">
+          <div class="canvas-empty-icon">⬡</div>
+          <div class="canvas-empty-text">Glissez un module ici<br>pour commencer votre workflow</div>
+          <div class="canvas-empty-hint">ou cliquez sur + Étape</div>
+        </div>
+
+        <!-- Pre-populated example flow (visible by default for UX preview) -->
+        <div id="canvas-flow"
+          style="display:flex;flex-direction:column;align-items:center;gap:0;position:relative;z-index:1">
+          <div class="wf-start-node">▶ START</div>
+          <div class="wf-connector"></div>
+          <div class="wf-add-step" onclick="addStep()">+ Ajouter une étape</div>
+          <div class="wf-connector"></div>
+          <div class="wf-end-node">■ END</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inspector -->
+    <div class="builder-inspector">
+      <div class="builder-section-header">Inspecteur</div>
+      <div class="inspector-empty">
+        <div class="inspector-empty-icon">🔍</div>
+        <div class="inspector-empty-text">
+          Sélectionnez une étape<br>pour configurer ses paramètres
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+{% endblock %}

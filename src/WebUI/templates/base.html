@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Argos — Security Operations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      ARGOS
+    </div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-breadcrumb" id="breadcrumb">/ <span>dashboard</span></div>
+    <div class="topbar-right">
+      <div class="status-dot"></div>
+      <div class="status-label">Opérationnel</div>
+      <div class="topbar-sep"></div>
+      <div class="topbar-version">v{{ APP_VERSION if APP_VERSION else '0.1.0' }}</div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="nav-section">Navigation</div>
+    <a class="nav-item {% if request.path == '/' %}active{% endif %}" href="/">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item {% if request.path == '/builder' %}active{% endif %}" href="/builder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+      Workflows Builder
+    </a>
+
+    <div class="nav-section">Résultats</div>
+    <a class="nav-item {% if request.path == '/missions' %}active{% endif %} " href="/missions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Missions
+      <span class="nav-badge">12</span>
+    </a>
+    <a class="nav-item {% if request.path == '/reports' %}active{% endif %}" href="/reports">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Rapports
+      <span class="nav-badge">5</span>
+    </a>
+
+    <div class="nav-section">Système</div>
+    <a class="nav-item {% if request.path == '/modules' %}active{% endif %}" href="/modules">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      Modules
+      <span class="nav-badge">{{ MODULES  | length }}</span>
+    </a>
+    <a class="nav-item {% if request.path == '/workflows' %}active{% endif %}" href="/workflows">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      Workflows
+      <span class="nav-badge">{{ WORKFLOWS  | length }}</span>
+    </a>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

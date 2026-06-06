@@ -1,0 +1,31 @@
+
+{% extends "base.html" %}
+{% block content %}
+  <!-- ton contenu ici -->
+    <!-- ══════════════ PAGE : WORKFLOWS (stub) ══════════════ -->
+
+      <div class="page-header">
+        <div><div class="page-title">Workflows</div><div class="page-sub">Registre des workflows</div></div>
+        <button class="btn btn-primary" href="/builder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Créer un workflow
+        </button>
+      </div>
+      <div class="card" style="padding:60px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px">
+        {% for workflow in WORKFLOWS %}
+        <div class="module-item">
+          <div class="module-icon green">{{ workflow.name[:2].upper() }}</div>
+          <div class="module-info">
+            <div class="module-name">{{ workflow.name }}</div>
+            <div class="module-desc">{{ workflow.description }}</div>
+          </div>
+          <div class="module-tag">{{ workflow.category }}</div>
+        </div>
+        {% else %}
+        <div style="padding:40px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px">
+          Aucun workflow créé
+        </div>
+        {% endfor %}
+      </div>
+
+{% endblock %}

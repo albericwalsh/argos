@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+{% if missions | selectattr('status', 'eq', 'running') | list %}
+<meta http-equiv="refresh" content="3">
+{% endif %}
+<div class="page-header">
+  <div>
+    <div class="page-title">Missions</div>
+    <div class="page-sub">Historique complet des exécutions</div>
+  </div>
+  <button class="btn btn-ghost">Exporter CSV</button>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><div class="card-title-dot blue"></div> {{ missions | length }} mission(s)</div>
+  </div>
+  <div class="card-body" style="padding:0">
+    <table class="data-table">
+      <thead><tr>
+        <th>ID</th><th>Nom</th><th>Workflow</th><th>Statut</th><th>Créée</th><th>Durée</th>
+      </tr></thead>
+      <tbody>
+        {% for m in missions %}
+        <tr>
+          <td class="mono">{{ m.id }}</td>
+          <td>{{ m.name }}</td>
+          <td class="mono">{{ m.workflow }}</td>
+          <td>
+            {% if m.status == 'completed' %}
+              <span class="badge badge-success">Succès</span>
+            {% elif m.status == 'running' %}
+              <span class="badge badge-running">En cours</span>
+            {% elif m.status == 'failed' %}
+              <span class="badge badge-error">Erreur</span>
+            {% else %}
+              <span class="badge badge-pending">{{ m.status }}</span>
+            {% endif %}
+          </td>
+          <td class="dim">{{ m.date_created[:16] | replace('T', ' ') }}</td>
+          <td class="dim">
+            {% if m.date_completed %}
+              {% set duration = ((m.date_completed[:19] | string) ) %}
+              {{ m.date_completed[:16] | replace('T', ' ') }}
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">
+          Aucune mission enregistrée
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,48 @@
+{
+  "id": "#MSN-21783841",
+  "name": "Debug Pipeline — ",
+  "workflow": "debug_pipeline",
+  "status": "completed",
+  "inputs": {
+    "text": "Estelle de Cîteaux",
+    "count": "3"
+  },
+  "result": {
+    "inputs": {
+      "text": "Estelle de Cîteaux",
+      "count": "3"
+    },
+    "step1": {
+      "output": [
+        {
+          "message": "Item 1 généré depuis 'Estelle de Cîteaux'",
+          "value": "Estelle de Cîteaux_1",
+          "step": "debug_input"
+        },
+        {
+          "message": "Item 2 généré depuis 'Estelle de Cîteaux'",
+          "value": "Estelle de Cîteaux_2",
+          "step": "debug_input"
+        },
+        {
+          "message": "Item 3 généré depuis 'Estelle de Cîteaux'",
+          "value": "Estelle de Cîteaux_3",
+          "step": "debug_input"
+        }
+      ]
+    },
+    "step2": {
+      "output": {
+        "total": 3,
+        "values": [
+          "Estelle de Cîteaux_1",
+          "Estelle de Cîteaux_2",
+          "Estelle de Cîteaux_3"
+        ],
+        "summary": "3 items reçus : Estelle de Cîteaux_1, Estelle de Cîteaux_2, Estelle de Cîteaux_3"
+      }
+    }
+  },
+  "date_created": "2026-06-06T15:48:28.784065",
+  "date_completed": "2026-06-06T15:48:28.786751"
+}

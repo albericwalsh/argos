@@ -47,3 +47,12 @@ def delete_parameters(args):
         args = [item for sublist in args for item in (sublist if isinstance(sublist, list) else [sublist])]
     return [arg for arg in args if not isinstance(arg, str) or not arg.startswith((" /"))]
 
+def create_file(file_path, content):
+    """Crée un fichier avec le contenu spécifié."""
+    try:
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(content)
+        print(f"File '{file_path}' created successfully.")
+    except Exception as e:
+        print(f"Error while creating file '{file_path}': {e}")
+        raise

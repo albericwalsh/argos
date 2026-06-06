@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">Lancer — {{ workflow.name }}</div>
+    <div class="page-sub">{{ workflow.description }}</div>
+  </div>
+  <a class="btn btn-ghost" href="/">← Retour</a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:16px">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><div class="card-title-dot green"></div> Paramètres de la mission</div>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+
+        <div class="form-group">
+          <div class="form-label">Nom de la mission</div>
+          <input class="form-input" type="text" name="mission_name"
+                 placeholder="ex: Recon — example.com"
+                 value="{{ workflow.name }} — ">
+        </div>
+
+        <div style="margin:20px 0;height:1px;background:var(--border)"></div>
+
+        {% for key, default in workflow.entry_args.items() %}
+        <div class="form-group">
+          <div class="form-label">{{ key }}</div>
+          <input class="form-input" type="text" name="{{ key }}"
+                 placeholder="{{ default if default else 'Valeur…' }}"
+                 value="{{ default }}">
+        </div>
+        {% endfor %}
+
+        <button class="btn btn-primary" style="margin-top:20px;width:100%;justify-content:center;padding:11px" type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Lancer la mission
+        </button>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Résumé du workflow -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><div class="card-title-dot blue"></div> Étapes du workflow</div>
+    </div>
+    <div class="card-body" style="padding:0">
+      {% for step in workflow.raw_steps %}
+        {{ step['module'] }}
+        {% for k, v in step['args'].items() %}
+          {{ k }}: {{ v }}
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

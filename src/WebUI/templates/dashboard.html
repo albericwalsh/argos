@@ -1,0 +1,189 @@
+
+{% extends "base.html" %}
+{% block content %}
+{% if missions | selectattr('status', 'eq', 'running') | list %}
+<meta http-equiv="refresh" content="3">
+{% endif %}
+  <!-- ton contenu ici -->
+    <!-- ══════════════ PAGE : DASHBOARD ══════════════ -->
+
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-sub">{{ APP_DESCRIPTION if APP_DESCRIPTION else 'Security Operations Center' }}</div>
+        </div>
+        <a class="btn btn-primary" href="/builder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nouveau workflow
+        </a>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card green">
+          <div class="kpi-label">Missions réussies</div>
+          <div class="kpi-value">{{ stats.missions_ok }}</div>
+          <div class="kpi-trend">+8 cette semaine</div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="currentColor" color="var(--accent)"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Workflows actifs</div>
+          <div class="kpi-value">{{ WORKFLOWS | length }}</div>
+          <div class="kpi-trend">{{ stats.missions_running }} en cours d'exécution</div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="1.5"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/></svg></div>
+        </div>
+        <div class="kpi-card warn">
+          <div class="kpi-label">Rapports générés</div>
+          <div class="kpi-value">à faire</div>
+          <div class="kpi-trend">Dernier: il y a 2h</div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16h16V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        </div>
+        <div class="kpi-card danger">
+          <div class="kpi-label">Erreurs détectées</div>
+          <div class="kpi-value">{{ stats.missions_error }}</div>
+          <div class="kpi-trend">Nécessite attention</div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        </div>
+      </div>
+
+      <!-- Main grid -->
+      <div class="dashboard-grid">
+        <div class="dashboard-left">
+
+          <!-- Missions récentes -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><div class="card-title-dot blue"></div> Missions récentes</div>
+              <div class="card-actions"><a class="btn btn-ghost" style="padding:4px 10px;font-size:10px" href="/missions">Voir tout</a></div>
+            </div>
+            <div class="card-body" style="padding:0">
+              <table class="data-table">
+                <thead><tr>
+                  <th>Mission</th><th>Workflow</th><th>Cible</th><th>Statut</th><th>Durée</th>
+                </tr></thead>
+                <tbody>
+                  {% for m in missions %}
+                  <tr>
+                    <td class="mono" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                      {{ m.id }}
+                    </td>
+                    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                      {{ m.workflow }}
+                    </td>
+                    <td class="mono" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                      {{ (m.inputs.values() | list | first) if m.inputs else '—' }}
+                    </td>
+                    <td>
+                      {% if m.status == 'completed' %}<span class="badge badge-success">Succès</span>
+                      {% elif m.status == 'running' %}<span class="badge badge-running">En cours</span>
+                      {% elif m.status == 'failed' %}<span class="badge badge-error">Erreur</span>
+                      {% else %}<span class="badge badge-pending">{{ m.status }}</span>{% endif %}
+                    </td>
+                    <td class="dim">{{ m.duration }}</td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Aucune mission</td></tr>
+                  {% endfor %}
+                  </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Rapports générés -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><div class="card-title-dot warn"></div> Rapports générés</div>
+              <div class="card-actions"><a class="btn btn-ghost" style="padding:4px 10px;font-size:10px" href="/reports">Voir tout</a></div>
+            </div>
+            <div class="card-body" style="padding:0">
+              <table class="data-table">
+                <thead><tr>
+                  <th>Rapport</th><th>Mission</th><th>Format</th><th>Date</th><th></th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td>Recon — example.com</td>
+                    <td class="mono">#MSN-044</td>
+                    <td><span class="badge" style="background:rgba(167,139,250,.1);color:#a78bfa">PDF</span></td>
+                    <td class="dim">Aujourd'hui 14:32</td>
+                    <td><button class="btn btn-ghost" style="padding:3px 8px;font-size:10px">↓</button></td>
+                  </tr>
+                  <tr>
+                    <td>Recon — shop.acme.org</td>
+                    <td class="mono">#MSN-041</td>
+                    <td><span class="badge" style="background:rgba(0,229,160,.1);color:var(--accent)">JSON</span></td>
+                    <td class="dim">Hier 09:18</td>
+                    <td><button class="btn btn-ghost" style="padding:3px 8px;font-size:10px">↓</button></td>
+                  </tr>
+                  <tr>
+                    <td>Port Scan — LAN</td>
+                    <td class="mono">#MSN-038</td>
+                    <td><span class="badge" style="background:rgba(0,153,255,.1);color:var(--accent2)">CSV</span></td>
+                    <td class="dim">12/06 11:45</td>
+                    <td><button class="btn btn-ghost" style="padding:3px 8px;font-size:10px">↓</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="dashboard-right">
+
+          <!-- Quick Run -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><div class="card-title-dot green"></div> Lancement rapide</div>
+            </div>
+            <div class="card-body quick-run">
+              <div class="form-group" style="margin-top:0">
+                <div class="form-label">Workflow</div>
+                <div class="select-wrapper">
+                  <select class="quick-select" onchange="if(this.value) window.location='/run/'+this.value">
+                  <option value="">— Sélectionner un workflow —</option>
+                  {% for workflow in WORKFLOWS %}
+                  <option value="{{ workflow.id }}">{{ workflow.name }}</option>
+                  {% endfor %}
+                </select>
+                </div>
+              </div>
+
+              <div id="wf-placeholder" style="padding:20px 0;text-align:center;font-family:var(--font-mono);font-size:11px;color:var(--dim)">
+                Choisissez un workflow<br>pour configurer la mission
+              </div>
+            </div>
+          </div>
+
+          <!-- Modules -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><div class="card-title-dot purple"></div> Modules disponibles</div>
+              <div class="card-actions"><a class="btn btn-ghost" style="padding:4px 10px;font-size:10px" href="/modules">Gérer</a></div>
+            </div>
+            
+            <div class="modules-list">
+              {% for module in MODULES %}
+              <div class="module-item">
+                <div class="module-icon" style="{{ module_style(module.name) }}">
+                {{ module.name[:2].upper() }}
+              </div>
+                <div class="module-info">
+                  <div class="module-name">{{ module.name }}</div>
+                  <div class="module-desc">{{ module.description | truncate(35, true, '…') }}</div>
+                </div>
+                <div class="module-tag">{{ module.category }}</div>
+              </div>
+              {% else %}
+              <div style="padding:40px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px">
+                Aucun module installé
+              </div>
+              {% endfor %}              
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+{% endblock %}
