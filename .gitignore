@@ -1,3 +1,4 @@
 ./argos_env
 *.pyc
 **/__pycache__/**
+./data/mission/*

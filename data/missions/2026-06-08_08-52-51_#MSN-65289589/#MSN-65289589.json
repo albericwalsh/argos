@@ -1,0 +1,204 @@
+{
+  "id": "#MSN-65289589",
+  "name": "Service & Vulnerability Scanner — ",
+  "workflow": "service_vuln_scan",
+  "status": "completed",
+  "inputs": {
+    "target": "10.105.1.69",
+    "severity_filter": "MEDIUM",
+    "test_mode": ""
+  },
+  "result": {
+    "inputs": {
+      "target": "10.105.1.69",
+      "severity_filter": "MEDIUM",
+      "test_mode": ""
+    },
+    "step1": {
+      "output": [
+        {
+          "port": 135,
+          "protocol": "tcp",
+          "state": "open",
+          "name": "msrpc",
+          "product": "Microsoft Windows RPC",
+          "version": "",
+          "scripts": {}
+        },
+        {
+          "port": 139,
+          "protocol": "tcp",
+          "state": "open",
+          "name": "netbios-ssn",
+          "product": "Microsoft Windows netbios-ssn",
+          "version": "",
+          "scripts": {}
+        },
+        {
+          "port": 445,
+          "protocol": "tcp",
+          "state": "open",
+          "name": "microsoft-ds",
+          "product": "",
+          "version": "",
+          "scripts": {}
+        },
+        {
+          "port": 902,
+          "protocol": "tcp",
+          "state": "open",
+          "name": "vmware-auth",
+          "product": "VMware Authentication Daemon",
+          "version": "1.10",
+          "scripts": {}
+        },
+        {
+          "port": 3000,
+          "protocol": "tcp",
+          "state": "open",
+          "name": "http",
+          "product": "Node.js Express framework",
+          "version": "",
+          "scripts": {}
+        },
+        {
+          "port": 3306,
+          "protocol": "tcp",
+          "state": "open",
+          "name": "mysql",
+          "product": "MySQL",
+          "version": "",
+          "scripts": {
+            "mysql-empty-password": "Host '10.105.1.69' is not allowed to connect to this MySQL server"
+          }
+        }
+      ]
+    },
+    "step2": {
+      "output": [
+        {
+          "cve_id": "CVE-2005-3059",
+          "service": "msrpc",
+          "product": "Microsoft Windows RPC",
+          "version": "",
+          "severity": "HIGH",
+          "score": 10.0,
+          "description": "Multiple unspecified vulnerabilities in Opera 8.50 on Linux and Windows have unknown impact and attack vectors, related ...",
+          "cpe": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-2005-1274",
+          "service": "mysql",
+          "product": "MySQL",
+          "version": "",
+          "severity": "HIGH",
+          "score": 10.0,
+          "description": "Stack-based buffer overflow in the getIfHeader function in the WebDAV functionality in MySQL MaxDB before 7.5.00.26 allo...",
+          "cpe": "cpe:2.3:a:mysql:maxdb:-:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-2006-4305",
+          "service": "mysql",
+          "product": "MySQL",
+          "version": "",
+          "severity": "HIGH",
+          "score": 10.0,
+          "description": "Buffer overflow in SAP DB and MaxDB before 7.6.00.30 allows remote attackers to execute arbitrary code via a long databa...",
+          "cpe": "cpe:2.3:a:mysql:maxdb:-:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-2007-0711",
+          "service": "msrpc",
+          "product": "Microsoft Windows RPC",
+          "version": "",
+          "severity": "HIGH",
+          "score": 9.3,
+          "description": "Integer overflow in Apple QuickTime before 7.1.5, when installed on Windows operating systems, allows remote user-assist...",
+          "cpe": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-2004-0717",
+          "service": "msrpc",
+          "product": "Microsoft Windows RPC",
+          "version": "",
+          "severity": "HIGH",
+          "score": 7.5,
+          "description": "Opera 7.51 for Windows and 7.50 for Linux does not properly prevent a frame in one domain from injecting content into a ...",
+          "cpe": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-2005-1891",
+          "service": "msrpc",
+          "product": "Microsoft Windows RPC",
+          "version": "",
+          "severity": "HIGH",
+          "score": 7.5,
+          "description": "The GIF parser in ateimg32.dll in AOL Instant Messenger (AIM) 5.9.3797 and earlier allows remote attackers to cause a de...",
+          "cpe": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-2005-3483",
+          "service": "msrpc",
+          "product": "Microsoft Windows RPC",
+          "version": "",
+          "severity": "HIGH",
+          "score": 7.5,
+          "description": "Buffer overflow in GO-Global for Windows 3.1.0.3270 and earlier allows remote attackers to execute arbitrary code via a ...",
+          "cpe": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-2005-4868",
+          "service": "msrpc",
+          "product": "Microsoft Windows RPC",
+          "version": "",
+          "severity": "HIGH",
+          "score": 7.1,
+          "description": "Shared memory sections and events in IBM DB2 8.1 have default permissions of read and write for the Everyone group, whic...",
+          "cpe": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-2012-2330",
+          "service": "http",
+          "product": "Node.js Express framework",
+          "version": "",
+          "severity": "MEDIUM",
+          "score": 6.4,
+          "description": "The Update method in src/node_http_parser.cc in Node.js before 0.6.17 and 0.7 before 0.7.8 does not properly check the l...",
+          "cpe": "cpe:2.3:a:nodejs:nodejs:0.6.16:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-2006-3074",
+          "service": "msrpc",
+          "product": "Microsoft Windows RPC",
+          "version": "",
+          "severity": "MEDIUM",
+          "score": 5.0,
+          "description": "klif.sys in Kaspersky Internet Security 6.0 and 7.0, Kaspersky Anti-Virus (KAV) 6.0 and 7.0, KAV 6.0 for Windows Worksta...",
+          "cpe": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-2006-3146",
+          "service": "msrpc",
+          "product": "Microsoft Windows RPC",
+          "version": "",
+          "severity": "MEDIUM",
+          "score": 5.0,
+          "description": "The TOSRFBD.SYS driver for Toshiba Bluetooth Stack 4.00.29 and earlier on Windows allows remote attackers to cause a den...",
+          "cpe": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"
+        },
+        {
+          "cve_id": "CVE-1999-0524",
+          "service": "msrpc",
+          "product": "Microsoft Windows RPC",
+          "version": "",
+          "severity": "MEDIUM",
+          "score": 4.0,
+          "description": "ICMP information such as (1) netmask and (2) timestamp is allowed from arbitrary hosts.",
+          "cpe": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"
+        }
+      ]
+    }
+  },
+  "date_created": "2026-06-08T08:52:51.419106",
+  "date_completed": "2026-06-08T08:53:49.849361"
+}
