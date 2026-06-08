@@ -63,13 +63,13 @@ def init_app_variables(app_dir):
                 APP_REPOSITORY = line.split('=')[1].strip().strip('"')
             elif line.startswith('CORS_ORIGINS'):
                 global CORS_ORIGINS
-                CORS_ORIGINS = [origin.strip().strip('"') for origin in line.split('=')[1].split(',')]
+                CORS_ORIGINS = [v.strip().strip('"') for v in line.split('=', 1)[1].strip().strip('[]').split(',')]
             elif line.startswith('CORS_METHODS'):
                 global CORS_METHODS
-                CORS_METHODS = [method.strip().strip('"') for method in line.split('=')[1].split(',')]
+                CORS_METHODS = [v.strip().strip('"') for v in line.split('=', 1)[1].strip().strip('[]').split(',')]
             elif line.startswith('CORS_HEADERS'):
                 global CORS_HEADERS
-                CORS_HEADERS = [header.strip().strip('"') for header in line.split('=')[1].split(',')]
+                CORS_HEADERS = [v.strip().strip('"') for v in line.split('=', 1)[1].strip().strip('[]').split(',')]
             
 
 
