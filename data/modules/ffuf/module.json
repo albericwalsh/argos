@@ -11,7 +11,7 @@
         },
         {
             "name": "wordlist",
-            "type": "string",
+            "type": "resource",
             "description": "Le chemin vers une liste de mots personnalisée à utiliser pour la force brute des sous-domaines."
         },
         {

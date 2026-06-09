@@ -1,0 +1,23 @@
+{
+  "id": "test_nmap",
+  "name": "Test namp",
+  "description": "",
+  "inputs": {
+    "target": ""
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "module": "nmap",
+      "args": {
+        "options": [
+          "-sV",
+          "--version-intensity",
+          "9",
+          "CIBLE"
+        ],
+        "target": "$inputs.target"
+      }
+    }
+  ]
+}

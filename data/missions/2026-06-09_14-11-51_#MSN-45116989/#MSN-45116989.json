@@ -1,18 +1,56 @@
 {
-  "id": "#MSN-51185928",
-  "name": "Service & Vulnerability Scanner — ",
-  "workflow": "service_vuln_scan",
+  "id": "#MSN-45116989",
+  "name": "Pentest — ",
+  "workflow": "pentest",
   "status": "completed",
   "inputs": {
-    "target": "192.168.1.8",
-    "severity_filter": "MEDIUM"
+    "dictionnaire": "C:\\Users\\alber\\Documents\\Informatique\\CERBER\\Argos\\data\\ressources\\fuzz_wordlist.txt",
+    "domaine": "10.105.1.69",
+    "permutation": "False",
+    "severity": "MEDIUM",
+    "cible": "ceweb agency"
   },
   "result": {
     "inputs": {
-      "target": "192.168.1.8",
-      "severity_filter": "MEDIUM"
+      "dictionnaire": "C:\\Users\\alber\\Documents\\Informatique\\CERBER\\Argos\\data\\ressources\\fuzz_wordlist.txt",
+      "domaine": "10.105.1.69",
+      "permutation": "False",
+      "severity": "MEDIUM",
+      "cible": "ceweb agency"
     },
-    "step1": {
+    "Scan d'identité": {
+      "output": [
+        {
+          "type": "Human Name",
+          "source": "ceweb agency",
+          "data": "ceweb agency",
+          "module": "SpiderFoot UI",
+          "timestamp": 1781007116
+        },
+        {
+          "type": "Username",
+          "source": "ceweb agency",
+          "data": "cewebagency",
+          "module": "sfp_accounts",
+          "timestamp": 1781007245
+        },
+        {
+          "type": "Username",
+          "source": "ceweb agency",
+          "data": "ceweb.agency",
+          "module": "sfp_accounts",
+          "timestamp": 1781007245
+        },
+        {
+          "type": "Account on External Site",
+          "source": "ceweb.agency",
+          "data": "Scribd (Document) (Category: hobby)\n<SFURL>https://www.scribd.com/search?query=ceweb.agency&verbatim=true</SFURL>",
+          "module": "sfp_accounts",
+          "timestamp": 1781007503
+        }
+      ]
+    },
+    "Nmap scan": {
       "output": [
         {
           "port": 135,
@@ -60,6 +98,15 @@
           "scripts": {}
         },
         {
+          "port": 3000,
+          "protocol": "tcp",
+          "state": "open",
+          "name": "http",
+          "product": "Node.js Express framework",
+          "version": "",
+          "scripts": {}
+        },
+        {
           "port": 3306,
           "protocol": "tcp",
           "state": "open",
@@ -67,12 +114,12 @@
           "product": "MySQL",
           "version": "",
           "scripts": {
-            "mysql-empty-password": "Host 'host.docker.internal' is not allowed to connect to this MySQL server"
+            "mysql-empty-password": "Host '10.105.1.69' is not allowed to connect to this MySQL server"
           }
         }
       ]
     },
-    "step2": {
+    "Scan des vulnérabilités": {
       "output": [
         {
           "cve_id": "CVE-2005-3059",
@@ -235,6 +282,16 @@
           "cpe": "cpe:2.3:a:vmware:ace:1.0:*:*:*:*:*:*:*"
         },
         {
+          "cve_id": "CVE-2012-2330",
+          "service": "http",
+          "product": "Node.js Express framework",
+          "version": "",
+          "severity": "MEDIUM",
+          "score": 6.4,
+          "description": "The Update method in src/node_http_parser.cc in Node.js before 0.6.17 and 0.7 before 0.7.8 does not properly check the l...",
+          "cpe": "cpe:2.3:a:nodejs:nodejs:0.6.16:*:*:*:*:*:*:*"
+        },
+        {
           "cve_id": "CVE-2007-4497",
           "service": "vmware-auth",
           "product": "VMware Authentication Daemon",
@@ -275,8 +332,147 @@
           "cpe": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"
         }
       ]
+    },
+    "Scan des sous domaines": {
+      "output": [
+        {
+          "path": "style",
+          "status": 301,
+          "size": 155,
+          "words": 6,
+          "lines": 11,
+          "redirect": "/style/",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "?wsdl",
+          "status": 200,
+          "size": 8734,
+          "words": 2050,
+          "lines": 184,
+          "redirect": "",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "shell?/bin/busybox+abcd",
+          "status": 301,
+          "size": 173,
+          "words": 6,
+          "lines": 11,
+          "redirect": "/shell/?/bin/busybox+abcd",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "health",
+          "status": 200,
+          "size": 41,
+          "words": 1,
+          "lines": 1,
+          "redirect": "",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "?view=log",
+          "status": 200,
+          "size": 8734,
+          "words": 2050,
+          "lines": 184,
+          "redirect": "",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "shell?busybox",
+          "status": 301,
+          "size": 163,
+          "words": 6,
+          "lines": 11,
+          "redirect": "/shell/?busybox",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "js",
+          "status": 301,
+          "size": 152,
+          "words": 6,
+          "lines": 11,
+          "redirect": "/js/",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "shell?echo%20bkbfjtia7ho2ajbz",
+          "status": 301,
+          "size": 179,
+          "words": 6,
+          "lines": 11,
+          "redirect": "/shell/?echo%20bkbfjtia7ho2ajbz",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "shell",
+          "status": 301,
+          "size": 155,
+          "words": 6,
+          "lines": 11,
+          "redirect": "/shell/",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "logs.html",
+          "status": 200,
+          "size": 902,
+          "words": 166,
+          "lines": 30,
+          "redirect": "",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "index.html",
+          "status": 200,
+          "size": 8734,
+          "words": 2050,
+          "lines": 184,
+          "redirect": "",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "settings",
+          "status": 200,
+          "size": 1200,
+          "words": 1,
+          "lines": 2,
+          "redirect": "",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "",
+          "status": 200,
+          "size": 8734,
+          "words": 2050,
+          "lines": 184,
+          "redirect": "",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "styles",
+          "status": 301,
+          "size": 156,
+          "words": 6,
+          "lines": 11,
+          "redirect": "/styles/",
+          "base_url": "http://10.105.1.69:3000"
+        },
+        {
+          "path": "index.html?findcli=-1",
+          "status": 200,
+          "size": 8734,
+          "words": 2050,
+          "lines": 184,
+          "redirect": "",
+          "base_url": "http://10.105.1.69:3000"
+        }
+      ]
     }
   },
-  "date_created": "2026-06-06T16:05:20.243171",
-  "date_completed": "2026-06-06T16:06:03.590779"
+  "date_created": "2026-06-09T14:11:51.794647",
+  "date_completed": "2026-06-09T14:19:35.788871"
 }

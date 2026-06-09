@@ -2,11 +2,13 @@ from datetime import datetime
 import os
 import sys
 
+# ✅ Ajouter cet import
+from src.WebUI.reports import register_reports_routes, REPORTS_DIR
+from src.core.report import list_reports
 from src.utils import open_file
 from flask import Flask, redirect, render_template, request, url_for
 import logging
 from flask_cors import CORS
-import flask.cli as flask_cli
 import threading
 from src.classes.missions import Mission
 from src.variables import  (
@@ -14,11 +16,18 @@ from src.variables import  (
     APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_AUTHOR, APP_LICENSE, APP_REPOSITORY, APP_DIR,
     CORS_ORIGINS, CORS_METHODS, CORS_HEADERS, WORKFLOWS_REGISTERY
 )
+from src.WebUI.mission_detail import bp as mission_detail_bp
+from src.WebUI.resources import bp as resources_bp
 
 app = Flask(APP_NAME, 
             template_folder=os.path.join(APP_DIR, 'src/WebUI/templates'),
             static_folder=os.path.join(APP_DIR, 'src/WebUI/static'))
-    
+
+# ✅ Ajouter cette ligne après la création de app (après le bloc CORS)
+register_reports_routes(app)
+app.register_blueprint(mission_detail_bp)
+app.register_blueprint(resources_bp)
+
 # CORS configuration
 CORS(app, resources={
     r"/*": {
@@ -82,16 +91,84 @@ def index():
         'missions_error': sum(1 for m in missions if m.get('status') == 'failed'),
     }
 
-    return render_template('dashboard.html', missions=missions[:5], stats=stats, **variables)
+    reports = list_reports(REPORTS_DIR)
+
+    return render_template('dashboard.html', missions=missions[:5], stats=stats, reports=reports[:5], **variables)
 
 
 @app.route('/builder')
 def builder():
-    return render_template('builder.html', **variables)
+    import json as _json
+    # Sérialise les modules en dicts pour le template JS
+    modules_list = [
+        {
+            "id":          m.id,
+            "name":        m.name,
+            "category":    m.category,
+            "description": m.description,
+            "entry_arg":   m.entry_arg,
+            "parameters":  getattr(m, 'parameters', []),
+        }
+        for m in MODULES_REGISTERY
+    ]
+    modules_json = _json.dumps(modules_list, ensure_ascii=False)
+
+    # Chargement optionnel d'un workflow existant pour édition
+    load_id = request.args.get('load')
+    load_wf = None
+    if load_id:
+        wf_path = os.path.join(APP_DIR, 'data', 'workflows', f'{load_id}.json')
+        if os.path.exists(wf_path):
+            with open(wf_path, encoding='utf-8') as f:
+                load_wf = _json.load(f)
+
+    return render_template('builder.html', load_wf=load_wf, modules_json=modules_json, **variables)
 
 @app.route('/workflows')
 def workflows():
     return render_template('workflows.html', **variables)
+
+@app.route('/workflows/save', methods=['POST'])
+def workflows_save():
+    import json as _json
+    data = request.get_json(force=True) or {}
+    wf_id = data.get('id', '').strip()
+    if not wf_id:
+        return _json.dumps({'ok': False, 'error': 'id manquant'}), 400, {'Content-Type': 'application/json'}
+
+    wf_dir = os.path.join(APP_DIR, 'data', 'workflows')
+    os.makedirs(wf_dir, exist_ok=True)
+    wf_path = os.path.join(wf_dir, f'{wf_id}.json')
+
+    with open(wf_path, 'w', encoding='utf-8') as f:
+        _json.dump(data, f, indent=2, ensure_ascii=False)
+
+    # Reload into WORKFLOWS_REGISTERY
+    from src.classes.workflows import Workflow
+    existing = next((i for i, w in enumerate(WORKFLOWS_REGISTERY) if w.id == wf_id), None)
+    try:
+        new_wf = Workflow(wf_path)
+        if existing is not None:
+            WORKFLOWS_REGISTERY[existing] = new_wf
+        else:
+            WORKFLOWS_REGISTERY.append(new_wf)
+    except Exception as e:
+        return _json.dumps({'ok': False, 'error': str(e)}), 500, {'Content-Type': 'application/json'}
+
+    return _json.dumps({'ok': True, 'id': wf_id}), 200, {'Content-Type': 'application/json'}
+
+@app.route('/workflows/delete/<workflow_id>', methods=['DELETE'])
+def workflows_delete(workflow_id):
+    import json as _json
+    safe_id = os.path.basename(workflow_id)
+    wf_path = os.path.join(APP_DIR, 'data', 'workflows', f'{safe_id}.json')
+    if os.path.exists(wf_path):
+        os.remove(wf_path)
+    # Remove from registry
+    idx = next((i for i, w in enumerate(WORKFLOWS_REGISTERY) if w.id == safe_id), None)
+    if idx is not None:
+        WORKFLOWS_REGISTERY.pop(idx)
+    return _json.dumps({'ok': True}), 200, {'Content-Type': 'application/json'}
 
 @app.route('/missions')
 def missions():
@@ -140,10 +217,6 @@ def missions():
 @app.route('/modules')
 def modules():
     return render_template('modules.html', **variables)
-
-@app.route('/reports')
-def reports():
-    return render_template('reports.html', **variables)
 
 @app.route('/run/<workflow_id>', methods=['GET', 'POST'])
 def run_workflow(workflow_id):

@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Argos — #MSN-45116989</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+  :root {
+    --bg: #0d0d0f; --surface: #141416; --surface2: #1c1c20;
+    --border: #2a2a2e; --border-hover: #3a3a3e;
+    --accent: #00e5a0; --text: #e8e8ec; --muted: #6b6b78;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --font-sans: 'IBM Plex Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--font-sans);
+    font-size: 13px; line-height: 1.6; padding: 40px;
+  }
+
+  /* ── Report header ── */
+  .report-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px; margin-bottom: 36px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .report-brand {
+    font-family: var(--font-mono); font-size: 11px; color: var(--accent);
+    letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .report-title { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .report-sub { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+  .report-meta {
+    text-align: right; font-family: var(--font-mono); font-size: 11px;
+    color: var(--muted); line-height: 1.9;
+  }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 3px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  .badge-completed { background: rgba(0,229,160,.12); color: var(--accent); border: 1px solid rgba(0,229,160,.3); }
+  .badge-failed    { background: rgba(255,77,77,.12);  color: #ff4d4d;       border: 1px solid rgba(255,77,77,.3); }
+  .badge-running   { background: rgba(245,166,35,.12); color: #f5a623;       border: 1px solid rgba(245,166,35,.3); }
+
+  /* ── Inputs section ── */
+  .section { margin-bottom: 36px; }
+  .section-title {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent);
+    padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 16px;
+  }
+  .meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1px; background: var(--border); border: 1px solid var(--border);
+    border-radius: 4px; overflow: hidden;
+  }
+  .meta-cell { background: var(--surface); padding: 12px 16px; }
+  .meta-label {
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px;
+  }
+  .meta-value { font-family: var(--font-mono); font-size: 12px; color: var(--text); font-weight: 600; }
+
+  /* ── Step pipeline ── */
+  .pipeline {
+    display: flex; align-items: center; gap: 0;
+    margin-bottom: 28px; overflow-x: auto;
+  }
+  .pipeline-step {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    white-space: nowrap;
+  }
+  .pipeline-step:first-child { border-radius: 4px 0 0 4px; }
+  .pipeline-step:last-child  { border-radius: 0 4px 4px 0; }
+  .pipeline-step + .pipeline-step { border-left: none; }
+  .pipeline-step-id { color: var(--accent); font-weight: 600; }
+  .pipeline-arrow { color: var(--muted); font-size: 12px; }
+
+  /* ── Shared module section styles (each render.html extends these) ── */
+  .mod-section { margin-bottom: 32px; }
+  .mod-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-bottom: none; border-radius: 4px 4px 0 0;
+  }
+  .mod-header-left { display: flex; align-items: center; gap: 12px; }
+  .mod-icon { font-size: 20px; color: var(--accent); line-height: 1; opacity: .7; }
+  .mod-name  { font-size: 13px; font-weight: 600; }
+  .mod-meta  { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .mod-stats { display: flex; gap: 24px; }
+  .mod-stat  { text-align: right; }
+  .mod-stat-num { font-family: var(--font-mono); font-size: 18px; font-weight: 700; display: block; line-height: 1; }
+  .mod-stat-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+  .table-wrap { border: 1px solid var(--border); border-radius: 0 0 4px 4px; overflow: hidden; }
+  .mod-empty {
+    padding: 32px; text-align: center; color: var(--muted);
+    font-family: var(--font-mono); font-size: 11px;
+    border: 1px solid var(--border); border-top: none;
+    border-radius: 0 0 4px 4px;
+  }
+
+  /* ── Footer ── */
+  .report-footer {
+    margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="report-header">
+  <div>
+    <div class="report-brand">▸ Argos Security Platform — Scan Report</div>
+    <div class="report-title">Pentest — </div>
+    <div class="report-sub">#MSN-45116989 &nbsp;·&nbsp; Workflow: pentest</div>
+  </div>
+  <div class="report-meta">
+    <span class="badge badge-completed">COMPLETED</span><br><br>
+    Généré le 2026-06-09 14:23:55<br>
+    Cible: <strong style="color:var(--text)">10.105.1.69</strong><br>
+    Durée: 7m 43s
+  </div>
+</div>
+
+<!-- ── Inputs ── -->
+<div class="section">
+  <div class="section-title">// Paramètres de la mission</div>
+  <div class="meta-grid"><div class="meta-cell"><div class="meta-label">dictionnaire</div><div class="meta-value">C:\Users\alber\Documents\Informatique\CERBER\Argos\data\ressources\fuzz_wordlist.txt</div></div><div class="meta-cell"><div class="meta-label">domaine</div><div class="meta-value">10.105.1.69</div></div><div class="meta-cell"><div class="meta-label">permutation</div><div class="meta-value">False</div></div><div class="meta-cell"><div class="meta-label">severity</div><div class="meta-value">MEDIUM</div></div><div class="meta-cell"><div class="meta-label">cible</div><div class="meta-value">ceweb agency</div></div></div>
+</div>
+
+<!-- ── Pipeline ── -->
+<div class="section">
+  <div class="section-title">// Pipeline d'exécution</div>
+  <div class="pipeline"><div class="pipeline-step"><span class="pipeline-step-id">Scan d'identité</span></div><span class="pipeline-arrow">→</span><div class="pipeline-step"><span class="pipeline-step-id">Nmap scan</span></div><span class="pipeline-arrow">→</span><div class="pipeline-step"><span class="pipeline-step-id">Scan des vulnérabilités</span></div><span class="pipeline-arrow">→</span><div class="pipeline-step"><span class="pipeline-step-id">Scan des sous domaines</span></div></div>
+</div>
+
+<!-- ── Step fragments ── -->
+<div class="section"><div class="section-title">// Step 1 — Scan d'identité · SpiderFoot</div>
+
+
+
+
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+  
+
+
+<div class="mod-section sf-section">
+  <div class="mod-header">
+    <div class="mod-header-left">
+      <span class="mod-icon">◈</span>
+      <div>
+        <div class="mod-name">SpiderFoot</div>
+        <div class="mod-meta">Intelligence Gathering · Scan d'identité</div>
+      </div>
+    </div>
+    <div class="mod-stats">
+      <div class="mod-stat">
+        <span class="mod-stat-num" style="color:var(--accent)">4</span>
+        <span class="mod-stat-lbl">événements</span>
+      </div>
+      <div class="mod-stat">
+        <span class="mod-stat-num">3</span>
+        <span class="mod-stat-lbl">types distincts</span>
+      </div>
+      
+      
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+      <div class="mod-stat">
+        <span class="mod-stat-num">2</span>
+        <span class="mod-stat-lbl">modules actifs</span>
+      </div>
+    </div>
+  </div>
+
+  
+
+  
+  
+  <div class="sf-type-bar">
+    
+    
+    <div class="sf-type-chip" onclick="filterType('Scan d'identité', 'Human Name')">
+      <span class="sf-type-name">Human Name</span>
+      <span class="sf-type-count">1</span>
+    </div>
+    
+    
+    <div class="sf-type-chip" onclick="filterType('Scan d'identité', 'Username')">
+      <span class="sf-type-name">Username</span>
+      <span class="sf-type-count">2</span>
+    </div>
+    
+    
+    <div class="sf-type-chip" onclick="filterType('Scan d'identité', 'Account on External Site')">
+      <span class="sf-type-name">Account on External Site</span>
+      <span class="sf-type-count">1</span>
+    </div>
+    
+    <div class="sf-type-chip sf-type-all active" onclick="filterType('Scan d'identité', '')">
+      <span class="sf-type-name">Tous</span>
+      <span class="sf-type-count">4</span>
+    </div>
+  </div>
+  
+
+  <div class="table-wrap">
+    <table class="mod-table sf-table" id="sftable-Scan d'identité">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Module</th>
+          <th>Donnée</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr class="sf-row" data-type="Human Name">
+          <td>
+            <span class="sf-type-badge">Human Name</span>
+          </td>
+          <td class="cell-mono cell-muted">SpiderFoot UI</td>
+          <td class="sf-data">ceweb agency</td>
+          <td class="cell-muted sf-source">ceweb agency</td>
+        </tr>
+        
+        <tr class="sf-row" data-type="Username">
+          <td>
+            <span class="sf-type-badge">Username</span>
+          </td>
+          <td class="cell-mono cell-muted">sfp_accounts</td>
+          <td class="sf-data">cewebagency</td>
+          <td class="cell-muted sf-source">ceweb agency</td>
+        </tr>
+        
+        <tr class="sf-row" data-type="Username">
+          <td>
+            <span class="sf-type-badge">Username</span>
+          </td>
+          <td class="cell-mono cell-muted">sfp_accounts</td>
+          <td class="sf-data">ceweb.agency</td>
+          <td class="cell-muted sf-source">ceweb agency</td>
+        </tr>
+        
+        <tr class="sf-row" data-type="Account on External Site">
+          <td>
+            <span class="sf-type-badge">Account on External Site</span>
+          </td>
+          <td class="cell-mono cell-muted">sfp_accounts</td>
+          <td class="sf-data">Scribd (Document) (Category: hobby)
+<SFURL>https://www.scribd.com/search?query=ceweb.agency&verbatim=true</SFURL></td>
+          <td class="cell-muted sf-source">ceweb.agency</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+
+  
+</div>
+
+<style>
+  .sf-section .mod-header { border-left: 3px solid var(--accent); }
+
+  /* ── Type chips ── */
+  .sf-type-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+  }
+  .sf-type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    cursor: pointer;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    transition: all .12s;
+    user-select: none;
+  }
+  .sf-type-chip:hover,
+  .sf-type-chip.active { background: rgba(0,229,160,.1); border-color: rgba(0,229,160,.3); color: var(--accent); }
+  .sf-type-all         { background: rgba(0,229,160,.06); border-color: rgba(0,229,160,.2); color: var(--accent); }
+  .sf-type-name        { text-transform: uppercase; letter-spacing: .07em; }
+  .sf-type-count {
+    background: rgba(255,255,255,.07);
+    border-radius: 2px;
+    padding: 0 4px;
+    font-size: 8px;
+    color: var(--text);
+  }
+
+  /* ── Table ── */
+  .sf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .sf-table th {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 12px;
+    text-align: left; background: var(--surface2, #1c1c20);
+    border-bottom: 1px solid var(--border);
+  }
+  .sf-table td {
+    padding: 8px 12px; border-bottom: 1px solid rgba(42,42,46,.5); vertical-align: top;
+  }
+  .sf-table tr:last-child td { border-bottom: none; }
+  .sf-table tr:hover td { background: rgba(255,255,255,.015); }
+  .sf-row.hidden { display: none; }
+
+  .sf-type-badge {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    color: var(--accent); background: rgba(0,229,160,.08);
+    border: 1px solid rgba(0,229,160,.2); border-radius: 3px;
+    padding: 2px 6px; white-space: nowrap; text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .sf-data   { color: var(--text);  font-size: 11px; word-break: break-all; max-width: 360px; }
+  .sf-source { font-size: 10px; max-width: 200px; word-break: break-all; }
+  .cell-muted { color: var(--muted); font-size: 11px; }
+  .cell-mono  { font-family: var(--font-mono); }
+</style>
+
+<script>
+(function() {
+  function filterType(stepId, type) {
+    const table = document.getElementById('sftable-' + stepId);
+    if (!table) return;
+
+    // Mise à jour chips
+    const bar = table.closest('.mod-section').querySelector('.sf-type-bar');
+    if (bar) {
+      bar.querySelectorAll('.sf-type-chip').forEach(c => c.classList.remove('active'));
+      const target = type
+        ? [...bar.querySelectorAll('.sf-type-chip')].find(c => c.querySelector('.sf-type-name').textContent === type)
+        : bar.querySelector('.sf-type-all');
+      if (target) target.classList.add('active');
+    }
+
+    // Filtrage lignes
+    table.querySelectorAll('.sf-row').forEach(row => {
+      row.classList.toggle('hidden', type !== '' && row.dataset.type !== type);
+    });
+  }
+  window.filterType = filterType;
+})();
+</script></div><div class="section"><div class="section-title">// Step 2 — Nmap scan · Nmap</div>
+
+
+
+<div class="mod-section">
+  <div class="mod-header">
+    <div class="mod-header-left">
+      <span class="mod-icon">⬡</span>
+      <div>
+        <div class="mod-name">Nmap</div>
+        <div class="mod-meta">Network Scanning · Nmap scan</div>
+      </div>
+    </div>
+    <div class="mod-stats">
+      <div class="mod-stat">
+        <span class="mod-stat-num" style="color:var(--accent)">7</span>
+        <span class="mod-stat-lbl">ports ouverts</span>
+      </div>
+      
+      <div class="mod-stat">
+        <span class="mod-stat-num">1</span>
+        <span class="mod-stat-lbl">avec scripts NSE</span>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="table-wrap">
+    <table class="mod-table">
+      <thead>
+        <tr>
+          <th>Port</th>
+          <th>Proto</th>
+          <th>Service</th>
+          <th>Produit</th>
+          <th>Version</th>
+          <th>État</th>
+          <th>Scripts NSE</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        
+        <tr class=""
+            >
+          <td><span class="port-pill">135</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>msrpc</strong></td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="cell-muted">—</span>
+            
+          </td>
+        </tr>
+        
+        
+        
+        <tr class=""
+            >
+          <td><span class="port-pill">139</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>netbios-ssn</strong></td>
+          <td class="cell-muted">Microsoft Windows netbios-ssn</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="cell-muted">—</span>
+            
+          </td>
+        </tr>
+        
+        
+        
+        <tr class=""
+            >
+          <td><span class="port-pill">445</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>microsoft-ds</strong></td>
+          <td class="cell-muted">—</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="cell-muted">—</span>
+            
+          </td>
+        </tr>
+        
+        
+        
+        <tr class=""
+            >
+          <td><span class="port-pill">902</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>vmware-auth</strong></td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cell-mono">1.10</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="cell-muted">—</span>
+            
+          </td>
+        </tr>
+        
+        
+        
+        <tr class=""
+            >
+          <td><span class="port-pill">912</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>vmware-auth</strong></td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cell-mono">1.0</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="cell-muted">—</span>
+            
+          </td>
+        </tr>
+        
+        
+        
+        <tr class=""
+            >
+          <td><span class="port-pill">3000</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>http</strong></td>
+          <td class="cell-muted">Node.js Express framework</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="cell-muted">—</span>
+            
+          </td>
+        </tr>
+        
+        
+        
+        <tr class="has-scripts"
+            onclick="toggleScripts('Nmap scan-7')" style="cursor:pointer">
+          <td><span class="port-pill">3306</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>mysql</strong></td>
+          <td class="cell-muted">MySQL</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="nse-count">1 script</span>
+            <span class="nse-chevron" id="chev-Nmap scan-7">▾</span>
+            
+          </td>
+        </tr>
+        
+        <tr class="scripts-row" id="scripts-Nmap scan-7" style="display:none">
+          <td colspan="7">
+            <div class="scripts-grid">
+              
+              <div class="script-item">
+                <div class="script-name">mysql-empty-password</div>
+                <pre class="script-out">Host '10.105.1.69' is not allowed to connect to this MySQL server</pre>
+              </div>
+              
+            </div>
+          </td>
+        </tr>
+        
+        
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+
+<style>
+  .mod-section { margin-bottom: 28px; }
+
+  .mod-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+  }
+  .mod-header-left { display: flex; align-items: center; gap: 12px; }
+  .mod-icon { font-size: 20px; color: var(--accent); line-height: 1; opacity: .7; }
+  .mod-name { font-size: 13px; font-weight: 600; }
+  .mod-meta { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+  .mod-stats { display: flex; gap: 24px; }
+  .mod-stat { text-align: right; }
+  .mod-stat-num { font-family: var(--font-mono); font-size: 18px; font-weight: 700; display: block; line-height: 1; }
+  .mod-stat-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+  .table-wrap { border: 1px solid var(--border); border-radius: 0 0 4px 4px; overflow: hidden; }
+  .mod-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .mod-table th {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 12px;
+    text-align: left; background: var(--surface2, #1c1c20);
+    border-bottom: 1px solid var(--border);
+  }
+  .mod-table td {
+    padding: 9px 12px; border-bottom: 1px solid rgba(42,42,46,.5); vertical-align: middle;
+  }
+  .mod-table tr:last-child td { border-bottom: none; }
+  .mod-table tr.has-scripts:hover td { background: rgba(0,229,160,.03); }
+
+  .port-pill { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--accent); }
+  .proto-tag {
+    font-family: var(--font-mono); font-size: 9px; color: var(--muted);
+    background: rgba(255,255,255,.05); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px 5px;
+  }
+  .state-badge {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 3px;
+  }
+  .state-open     { background: rgba(0,229,160,.1);  color: var(--accent); border: 1px solid rgba(0,229,160,.25); }
+  .state-closed   { background: rgba(255,77,77,.1);  color: #ff4d4d;       border: 1px solid rgba(255,77,77,.25); }
+  .state-filtered { background: rgba(245,166,35,.1); color: #f5a623;       border: 1px solid rgba(245,166,35,.25); }
+
+  .nse-count { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+  .nse-chevron { margin-left: 6px; font-size: 11px; color: var(--accent); transition: transform .15s; display: inline-block; }
+  .nse-chevron.open { transform: rotate(180deg); }
+
+  .scripts-row td { padding: 0; background: rgba(0,229,160,.03); }
+  .scripts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--border); }
+  .script-item { background: var(--bg, #0d0d0f); padding: 10px 14px; }
+  .script-name {
+    font-family: var(--font-mono); font-size: 9px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px;
+  }
+  .script-out {
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    white-space: pre-wrap; word-break: break-all; margin: 0; line-height: 1.5;
+  }
+  .cell-muted { color: var(--muted); font-size: 11px; }
+  .cell-mono  { font-family: var(--font-mono); font-size: 11px; }
+  .mod-empty {
+    padding: 32px; text-align: center; color: var(--muted);
+    font-family: var(--font-mono); font-size: 11px;
+    border: 1px solid var(--border); border-top: none; border-radius: 0 0 4px 4px;
+  }
+</style>
+
+<script>
+function toggleScripts(key) {
+  const row  = document.getElementById('scripts-' + key);
+  const chev = document.getElementById('chev-' + key);
+  if (!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  chev && chev.classList.toggle('open', !open);
+}
+</script></div><div class="section"><div class="section-title">// Step 3 — Scan des vulnérabilités · Vulnerability Lookup</div>
+
+
+
+
+
+
+<div class="mod-section vuln-section">
+  <div class="mod-header">
+    <div class="mod-header-left">
+      <span class="mod-icon">⚠</span>
+      <div>
+        <div class="mod-name">Vulnerability Lookup</div>
+        <div class="mod-meta">Vulnerability Assessment · Scan des vulnérabilités</div>
+      </div>
+    </div>
+    <div class="vuln-counters">
+      
+      <div class="vuln-counter vc-high">
+        <span class="vc-num">12</span>
+        <span class="vc-lbl">High</span>
+      </div>
+      <div class="vuln-counter vc-medium">
+        <span class="vc-num">9</span>
+        <span class="vc-lbl">Medium</span>
+      </div>
+      <div class="vuln-counter vc-low">
+        <span class="vc-num">0</span>
+        <span class="vc-lbl">Low / Info</span>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="table-wrap">
+    <table class="mod-table vuln-table">
+      <thead>
+        <tr>
+          <th>CVE</th>
+          <th>Sévérité</th>
+          <th>Score CVSS</th>
+          <th>Service</th>
+          <th>Produit</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2005-3059"
+               target="_blank" rel="noopener">CVE-2005-3059</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-critical">
+                10.0
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-critical"
+                     style="width:100%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">msrpc</td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cve-desc">Multiple unspecified vulnerabilities in Opera 8.50 on Linux and Windows have unknown impact and attack vectors, related ...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2005-4459"
+               target="_blank" rel="noopener">CVE-2005-4459</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-critical">
+                10.0
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-critical"
+                     style="width:100%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">vmware-auth</td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cve-desc">Heap-based buffer overflow in the NAT networking components vmnat.exe and vmnet-natd in VMWare Workstation 5.5, GSX Serv...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2007-0061"
+               target="_blank" rel="noopener">CVE-2007-0061</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-critical">
+                10.0
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-critical"
+                     style="width:100%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">vmware-auth</td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cve-desc">The DHCP server in EMC VMware Workstation before 5.5.5 Build 56455 and 6.x before 6.0.1 Build 55017, Player before 1.0.5...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2007-0063"
+               target="_blank" rel="noopener">CVE-2007-0063</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-critical">
+                10.0
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-critical"
+                     style="width:100%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">vmware-auth</td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cve-desc">Integer underflow in the DHCP server in EMC VMware Workstation before 5.5.5 Build 56455 and 6.x before 6.0.1 Build 55017...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2005-1274"
+               target="_blank" rel="noopener">CVE-2005-1274</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-critical">
+                10.0
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-critical"
+                     style="width:100%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">mysql</td>
+          <td class="cell-muted">MySQL</td>
+          <td class="cve-desc">Stack-based buffer overflow in the getIfHeader function in the WebDAV functionality in MySQL MaxDB before 7.5.00.26 allo...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2006-4305"
+               target="_blank" rel="noopener">CVE-2006-4305</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-critical">
+                10.0
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-critical"
+                     style="width:100%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">mysql</td>
+          <td class="cell-muted">MySQL</td>
+          <td class="cve-desc">Buffer overflow in SAP DB and MaxDB before 7.6.00.30 allows remote attackers to execute arbitrary code via a long databa...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2007-0711"
+               target="_blank" rel="noopener">CVE-2007-0711</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-critical">
+                9.3
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-critical"
+                     style="width:93%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">msrpc</td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cve-desc">Integer overflow in Apple QuickTime before 7.1.5, when installed on Windows operating systems, allows remote user-assist...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2004-0717"
+               target="_blank" rel="noopener">CVE-2004-0717</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-high">
+                7.5
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-high"
+                     style="width:75%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">msrpc</td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cve-desc">Opera 7.51 for Windows and 7.50 for Linux does not properly prevent a frame in one domain from injecting content into a ...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2005-1891"
+               target="_blank" rel="noopener">CVE-2005-1891</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-high">
+                7.5
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-high"
+                     style="width:75%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">msrpc</td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cve-desc">The GIF parser in ateimg32.dll in AOL Instant Messenger (AIM) 5.9.3797 and earlier allows remote attackers to cause a de...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2005-3483"
+               target="_blank" rel="noopener">CVE-2005-3483</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-high">
+                7.5
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-high"
+                     style="width:75%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">msrpc</td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cve-desc">Buffer overflow in GO-Global for Windows 3.1.0.3270 and earlier allows remote attackers to execute arbitrary code via a ...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2005-4868"
+               target="_blank" rel="noopener">CVE-2005-4868</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-high">
+                7.1
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-high"
+                     style="width:71%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">msrpc</td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cve-desc">Shared memory sections and events in IBM DB2 8.1 have default permissions of read and write for the Everyone group, whic...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2008-1340"
+               target="_blank" rel="noopener">CVE-2008-1340</a>
+          </td>
+          <td><span class="sev sev-HIGH">HIGH</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-high">
+                7.1
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-high"
+                     style="width:71%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">vmware-auth</td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cve-desc">Virtual Machine Communication Interface (VMCI) in VMware Workstation 6.0.x before 6.0.3, VMware Player 2.0.x before 2.0....</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2007-5023"
+               target="_blank" rel="noopener">CVE-2007-5023</a>
+          </td>
+          <td><span class="sev sev-MEDIUM">MEDIUM</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-med">
+                6.9
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-med"
+                     style="width:69%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">vmware-auth</td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cve-desc">Unquoted Windows search path vulnerability in EMC VMware Workstation before 5.5.5 Build 56455 and 6.x before 6.0.1 Build...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2008-0923"
+               target="_blank" rel="noopener">CVE-2008-0923</a>
+          </td>
+          <td><span class="sev sev-MEDIUM">MEDIUM</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-med">
+                6.9
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-med"
+                     style="width:69%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">vmware-auth</td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cve-desc">Directory traversal vulnerability in the Shared Folders feature for VMWare ACE 1.0.2 and 2.0.2, Player 1.0.4 and 2.0.2, ...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2008-1361"
+               target="_blank" rel="noopener">CVE-2008-1361</a>
+          </td>
+          <td><span class="sev sev-MEDIUM">MEDIUM</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-med">
+                6.8
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-med"
+                     style="width:68%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">vmware-auth</td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cve-desc">VMware Workstation 6.0.x before 6.0.3 and 5.5.x before 5.5.6, VMware Player 2.0.x before 2.0.3 and 1.0.x before 1.0.6, V...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2007-4496"
+               target="_blank" rel="noopener">CVE-2007-4496</a>
+          </td>
+          <td><span class="sev sev-MEDIUM">MEDIUM</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-med">
+                6.5
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-med"
+                     style="width:65%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">vmware-auth</td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cve-desc">Unspecified vulnerability in EMC VMware Workstation before 5.5.5 Build 56455 and 6.x before 6.0.1 Build 55017, Player be...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2012-2330"
+               target="_blank" rel="noopener">CVE-2012-2330</a>
+          </td>
+          <td><span class="sev sev-MEDIUM">MEDIUM</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-med">
+                6.4
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-med"
+                     style="width:64%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">http</td>
+          <td class="cell-muted">Node.js Express framework</td>
+          <td class="cve-desc">The Update method in src/node_http_parser.cc in Node.js before 0.6.17 and 0.7 before 0.7.8 does not properly check the l...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2007-4497"
+               target="_blank" rel="noopener">CVE-2007-4497</a>
+          </td>
+          <td><span class="sev sev-MEDIUM">MEDIUM</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-med">
+                5.5
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-med"
+                     style="width:55%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">vmware-auth</td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cve-desc">Unspecified vulnerability in EMC VMware Workstation before 5.5.5 Build 56455 and 6.x before 6.0.1 Build 55017, Player be...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2006-3074"
+               target="_blank" rel="noopener">CVE-2006-3074</a>
+          </td>
+          <td><span class="sev sev-MEDIUM">MEDIUM</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-med">
+                5.0
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-med"
+                     style="width:50%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">msrpc</td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cve-desc">klif.sys in Kaspersky Internet Security 6.0 and 7.0, Kaspersky Anti-Virus (KAV) 6.0 and 7.0, KAV 6.0 for Windows Worksta...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-2006-3146"
+               target="_blank" rel="noopener">CVE-2006-3146</a>
+          </td>
+          <td><span class="sev sev-MEDIUM">MEDIUM</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-med">
+                5.0
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-med"
+                     style="width:50%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">msrpc</td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cve-desc">The TOSRFBD.SYS driver for Toshiba Bluetooth Stack 4.00.29 and earlier on Windows allows remote attackers to cause a den...</td>
+        </tr>
+        
+        
+        
+        <tr>
+          <td>
+            <a class="cve-link" href="https://nvd.nist.gov/vuln/detail/CVE-1999-0524"
+               target="_blank" rel="noopener">CVE-1999-0524</a>
+          </td>
+          <td><span class="sev sev-MEDIUM">MEDIUM</span></td>
+          <td>
+            <div class="score-wrap">
+              <span class="score-num score-med">
+                4.0
+              </span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill score-med"
+                     style="width:40%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="cell-mono cell-muted">msrpc</td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cve-desc">ICMP information such as (1) netmask and (2) timestamp is allowed from arbitrary hosts.</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+
+<style>
+  .vuln-section .mod-header { border-left: 3px solid #ff4d4d; }
+
+  .vuln-counters { display: flex; gap: 8px; }
+  .vuln-counter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 4px;
+    min-width: 52px;
+  }
+  .vc-critical { background: rgba(255,32,32,.12);  border: 1px solid rgba(255,32,32,.3); }
+  .vc-high     { background: rgba(255,77,77,.1);   border: 1px solid rgba(255,77,77,.25); }
+  .vc-medium   { background: rgba(245,166,35,.1);  border: 1px solid rgba(245,166,35,.25); }
+  .vc-low      { background: rgba(77,200,255,.08); border: 1px solid rgba(77,200,255,.2); }
+  .vc-num {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .vc-critical .vc-num { color: #ff2020; }
+  .vc-high .vc-num     { color: #ff4d4d; }
+  .vc-medium .vc-num   { color: #f5a623; }
+  .vc-low .vc-num      { color: #4dc8ff; }
+  .vc-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+  .vuln-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .vuln-table th {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 12px;
+    text-align: left; background: var(--surface2, #1c1c20);
+    border-bottom: 1px solid var(--border);
+  }
+  .vuln-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(42,42,46,.5);
+    vertical-align: top;
+  }
+  .vuln-table tr:last-child td { border-bottom: none; }
+  .vuln-table tr:hover td { background: rgba(255,255,255,.015); }
+
+  .cve-link {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .cve-link:hover { color: var(--accent); text-decoration: underline; }
+
+  .sev {
+    display: inline-block; padding: 2px 7px; border-radius: 3px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .sev-CRITICAL { background: rgba(255,32,32,.15);  color: #ff2020; border: 1px solid rgba(255,32,32,.3); }
+  .sev-HIGH     { background: rgba(255,77,77,.15);   color: #ff4d4d; border: 1px solid rgba(255,77,77,.3); }
+  .sev-MEDIUM   { background: rgba(245,166,35,.12);  color: #f5a623; border: 1px solid rgba(245,166,35,.3); }
+  .sev-LOW      { background: rgba(77,200,255,.1);   color: #4dc8ff; border: 1px solid rgba(77,200,255,.25); }
+  .sev-INFO     { background: rgba(155,155,255,.1);  color: #9b9bff; border: 1px solid rgba(155,155,255,.25); }
+
+  .score-wrap { display: flex; flex-direction: column; gap: 4px; min-width: 60px; }
+  .score-num  { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+  .score-critical { color: #ff2020; }
+  .score-high     { color: #ff4d4d; }
+  .score-med      { color: #f5a623; }
+  .score-low      { color: #4dc8ff; }
+
+  .score-bar-track {
+    height: 3px;
+    background: rgba(255,255,255,.07);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width .4s ease;
+  }
+  .score-bar-fill.score-critical { background: #ff2020; }
+  .score-bar-fill.score-high     { background: #ff4d4d; }
+  .score-bar-fill.score-med      { background: #f5a623; }
+  .score-bar-fill.score-low      { background: #4dc8ff; }
+
+  .cve-desc { color: var(--muted); font-size: 11px; line-height: 1.55; max-width: 380px; }
+</style></div><div class="section"><div class="section-title">// Step 4 — Scan des sous domaines · Ffuf</div>
+
+
+
+
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+
+<div class="mod-section">
+  <div class="mod-header">
+    <div class="mod-header-left">
+      <span class="mod-icon">⟁</span>
+      <div>
+        <div class="mod-name">Ffuf</div>
+        <div class="mod-meta">Network Scanning · Scan des sous domaines</div>
+      </div>
+    </div>
+    <div class="mod-stats">
+      <div class="mod-stat">
+        <span class="mod-stat-num" style="color:var(--accent)">15</span>
+        <span class="mod-stat-lbl">chemins trouvés</span>
+      </div>
+      
+      <div class="mod-stat">
+        <span class="mod-stat-num">7</span>
+        <span class="mod-stat-lbl">redirections</span>
+      </div>
+      
+      <div class="mod-stat">
+        <span class="mod-stat-num" style="color:var(--accent)">8</span>
+        <span class="mod-stat-lbl">codes 200</span>
+      </div>
+    </div>
+  </div>
+
+  
+
+  
+  
+  <div class="target-block">
+
+    
+    <div class="target-header">
+      <span class="target-label">cible</span>
+      <span class="target-url">http://10.105.1.69:3000</span>
+      <span class="target-count">15 résultats</span>
+    </div>
+    
+
+    <div class="table-wrap ">
+      <table class="mod-table">
+        <thead>
+          <tr>
+            <th>Chemin</th>
+            <th>Statut</th>
+            <th>Taille</th>
+            <th>Mots</th>
+            <th>Lignes</th>
+            <th>Redirection</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          
+          <tr class="has-redirect">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/style" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">style</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-301">301</span>
+            </td>
+            <td class="cell-mono">155 <span class="unit">B</span></td>
+            <td class="cell-mono">6</td>
+            <td class="cell-mono">11</td>
+            <td class="cell-muted">
+              
+              <span class="redirect-arrow">→</span> /style/
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/?wsdl" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">?wsdl</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-200">200</span>
+            </td>
+            <td class="cell-mono">8734 <span class="unit">B</span></td>
+            <td class="cell-mono">2050</td>
+            <td class="cell-mono">184</td>
+            <td class="cell-muted">
+              
+              —
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="has-redirect">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/shell?/bin/busybox+abcd" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">shell?/bin/busybox+abcd</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-301">301</span>
+            </td>
+            <td class="cell-mono">173 <span class="unit">B</span></td>
+            <td class="cell-mono">6</td>
+            <td class="cell-mono">11</td>
+            <td class="cell-muted">
+              
+              <span class="redirect-arrow">→</span> /shell/?/bin/busybox+abcd
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/health" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">health</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-200">200</span>
+            </td>
+            <td class="cell-mono">41 <span class="unit">B</span></td>
+            <td class="cell-mono">1</td>
+            <td class="cell-mono">1</td>
+            <td class="cell-muted">
+              
+              —
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/?view=log" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">?view=log</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-200">200</span>
+            </td>
+            <td class="cell-mono">8734 <span class="unit">B</span></td>
+            <td class="cell-mono">2050</td>
+            <td class="cell-mono">184</td>
+            <td class="cell-muted">
+              
+              —
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="has-redirect">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/shell?busybox" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">shell?busybox</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-301">301</span>
+            </td>
+            <td class="cell-mono">163 <span class="unit">B</span></td>
+            <td class="cell-mono">6</td>
+            <td class="cell-mono">11</td>
+            <td class="cell-muted">
+              
+              <span class="redirect-arrow">→</span> /shell/?busybox
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="has-redirect">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/js" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">js</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-301">301</span>
+            </td>
+            <td class="cell-mono">152 <span class="unit">B</span></td>
+            <td class="cell-mono">6</td>
+            <td class="cell-mono">11</td>
+            <td class="cell-muted">
+              
+              <span class="redirect-arrow">→</span> /js/
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="has-redirect">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/shell?echo%20bkbfjtia7ho2ajbz" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">shell?echo%20bkbfjtia7ho2ajbz</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-301">301</span>
+            </td>
+            <td class="cell-mono">179 <span class="unit">B</span></td>
+            <td class="cell-mono">6</td>
+            <td class="cell-mono">11</td>
+            <td class="cell-muted">
+              
+              <span class="redirect-arrow">→</span> /shell/?echo%20bkbfjtia7ho2ajbz
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="has-redirect">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/shell" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">shell</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-301">301</span>
+            </td>
+            <td class="cell-mono">155 <span class="unit">B</span></td>
+            <td class="cell-mono">6</td>
+            <td class="cell-mono">11</td>
+            <td class="cell-muted">
+              
+              <span class="redirect-arrow">→</span> /shell/
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/logs.html" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">logs.html</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-200">200</span>
+            </td>
+            <td class="cell-mono">902 <span class="unit">B</span></td>
+            <td class="cell-mono">166</td>
+            <td class="cell-mono">30</td>
+            <td class="cell-muted">
+              
+              —
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/index.html" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">index.html</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-200">200</span>
+            </td>
+            <td class="cell-mono">8734 <span class="unit">B</span></td>
+            <td class="cell-mono">2050</td>
+            <td class="cell-mono">184</td>
+            <td class="cell-muted">
+              
+              —
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/settings" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">settings</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-200">200</span>
+            </td>
+            <td class="cell-mono">1200 <span class="unit">B</span></td>
+            <td class="cell-mono">1</td>
+            <td class="cell-mono">2</td>
+            <td class="cell-muted">
+              
+              —
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill"></span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-200">200</span>
+            </td>
+            <td class="cell-mono">8734 <span class="unit">B</span></td>
+            <td class="cell-mono">2050</td>
+            <td class="cell-mono">184</td>
+            <td class="cell-muted">
+              
+              —
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="has-redirect">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/styles" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">styles</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-301">301</span>
+            </td>
+            <td class="cell-mono">156 <span class="unit">B</span></td>
+            <td class="cell-mono">6</td>
+            <td class="cell-mono">11</td>
+            <td class="cell-muted">
+              
+              <span class="redirect-arrow">→</span> /styles/
+              
+            </td>
+          </tr>
+          
+          
+          <tr class="">
+            <td>
+              
+              <a class="path-link" href="http://10.105.1.69:3000/index.html?findcli=-1" target="_blank" rel="noopener">
+                <span class="path-base">http://10.105.1.69:3000/</span><span class="path-pill">index.html?findcli=-1</span>
+              </a>
+              
+            </td>
+            <td>
+              
+              <span class="status-badge status-200">200</span>
+            </td>
+            <td class="cell-mono">8734 <span class="unit">B</span></td>
+            <td class="cell-mono">2050</td>
+            <td class="cell-mono">184</td>
+            <td class="cell-muted">
+              
+              —
+              
+            </td>
+          </tr>
+          
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+
+  
+</div>
+
+<style>
+  .mod-section { margin-bottom: 28px; }
+
+  .mod-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+  }
+  .mod-header-left { display: flex; align-items: center; gap: 12px; }
+  .mod-icon { font-size: 20px; color: var(--accent); line-height: 1; opacity: .7; }
+  .mod-name { font-size: 13px; font-weight: 600; }
+  .mod-meta { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+  .mod-stats { display: flex; gap: 24px; }
+  .mod-stat { text-align: right; }
+  .mod-stat-num { font-family: var(--font-mono); font-size: 18px; font-weight: 700; display: block; line-height: 1; }
+  .mod-stat-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+  /* ── Bandeau cible ── */
+  .target-block { margin-bottom: 0; }
+  .target-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    background: rgba(0,229,160,.05);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .target-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--accent);
+    opacity: .7;
+  }
+  .target-url {
+    color: var(--accent);
+    font-weight: 600;
+    flex: 1;
+  }
+  .target-count {
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .table-wrap { border: 1px solid var(--border); border-radius: 0 0 4px 4px; overflow: hidden; margin-bottom: 8px; }
+  .table-no-radius { border-radius: 0; }
+
+  .mod-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .mod-table th {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 12px;
+    text-align: left; background: var(--surface2, #1c1c20);
+    border-bottom: 1px solid var(--border);
+  }
+  .mod-table td {
+    padding: 9px 12px; border-bottom: 1px solid rgba(42,42,46,.5); vertical-align: middle;
+  }
+  .mod-table tr:last-child td { border-bottom: none; }
+  .mod-table tr.has-redirect:hover td { background: rgba(0,229,160,.03); }
+
+  .path-link { text-decoration: none; display: block; }
+  .path-link:hover .path-pill { text-decoration: underline; }
+  .path-base { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+  .path-pill { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--accent); word-break: break-all; }
+
+  /* Codes HTTP */
+  .status-badge {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 3px;
+  }
+  .status-badge[class*="status-2"] { background: rgba(0,229,160,.1);   color: var(--accent); border: 1px solid rgba(0,229,160,.25); }
+  .status-badge[class*="status-3"] { background: rgba(245,166,35,.1);  color: #f5a623;       border: 1px solid rgba(245,166,35,.25); }
+  .status-badge[class*="status-4"] { background: rgba(255,77,77,.1);   color: #ff4d4d;       border: 1px solid rgba(255,77,77,.25); }
+  .status-badge[class*="status-5"] { background: rgba(180,60,255,.1);  color: #b43cff;       border: 1px solid rgba(180,60,255,.25); }
+
+  .redirect-arrow { color: var(--accent); font-weight: 700; margin-right: 4px; }
+  .unit      { color: var(--muted); font-size: 9px; }
+  .cell-muted { color: var(--muted); font-size: 11px; word-break: break-all; }
+  .cell-mono  { font-family: var(--font-mono); font-size: 11px; }
+
+  .mod-empty {
+    padding: 32px; text-align: center; color: var(--muted);
+    font-family: var(--font-mono); font-size: 11px;
+    border: 1px solid var(--border); border-top: none; border-radius: 0 0 4px 4px;
+  }
+</style></div>
+
+<!-- ── Footer ── -->
+<div class="report-footer">
+  <span>Argos Security Platform</span>
+  <span>Rapport confidentiel — usage interne</span>
+  <span>Généré le 2026-06-09 14:23:55</span>
+</div>
+
+</body>
+</html>

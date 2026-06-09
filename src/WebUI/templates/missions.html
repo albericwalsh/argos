@@ -18,11 +18,11 @@
   <div class="card-body" style="padding:0">
     <table class="data-table">
       <thead><tr>
-        <th>ID</th><th>Nom</th><th>Workflow</th><th>Statut</th><th>Créée</th><th>Durée</th>
+        <th>ID</th><th>Nom</th><th>Workflow</th><th>Statut</th><th>Créée</th><th>Durée</th><th></th>
       </tr></thead>
       <tbody>
         {% for m in missions %}
-        <tr>
+        <tr style="cursor:pointer" onclick="window.location='/missions/{{ m.id | replace('#','') }}'">
           <td class="mono">{{ m.id }}</td>
           <td>{{ m.name }}</td>
           <td class="mono">{{ m.workflow }}</td>
@@ -30,7 +30,10 @@
             {% if m.status == 'completed' %}
               <span class="badge badge-success">Succès</span>
             {% elif m.status == 'running' %}
-              <span class="badge badge-running">En cours</span>
+              <span class="badge badge-running">
+                <span style="display:inline-block;width:7px;height:7px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;vertical-align:middle"></span>
+                En cours
+              </span>
             {% elif m.status == 'failed' %}
               <span class="badge badge-error">Erreur</span>
             {% else %}
@@ -40,13 +43,26 @@
           <td class="dim">{{ m.date_created[:16] | replace('T', ' ') }}</td>
           <td class="dim">
             {% if m.date_completed %}
-              {% set duration = ((m.date_completed[:19] | string) ) %}
-              {{ m.date_completed[:16] | replace('T', ' ') }}
-            {% else %}—{% endif %}
+              {% set s = ((m.date_completed[:19]) ) %}
+              {# Durée affichée côté client via JS si running #}
+              {% if m.status == 'running' %}
+                <span class="live-duration" data-start="{{ m.date_created }}">…</span>
+              {% else %}
+                {{ m.date_completed[:16] | replace('T', ' ') }}
+              {% endif %}
+            {% else %}
+              {% if m.status == 'running' %}
+                <span class="live-duration" data-start="{{ m.date_created }}">…</span>
+              {% else %}—{% endif %}
+            {% endif %}
+          </td>
+          <td style="text-align:right">
+            <a href="/missions/{{ m.id | replace('#','') }}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
+               onclick="event.stopPropagation()">Détail →</a>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">
+        <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">
           Aucune mission enregistrée
         </td></tr>
         {% endfor %}
@@ -54,5 +70,21 @@
     </table>
   </div>
 </div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+.data-table tr[onclick]:hover td { background: rgba(255,255,255,.025); }
+</style>
+
+<script>
+// Compteurs de durée live pour les missions en cours
+document.querySelectorAll('.live-duration').forEach(el => {
+  const start = new Date(el.dataset.start);
+  setInterval(() => {
+    const secs = Math.floor((Date.now() - start) / 1000);
+    el.textContent = `${Math.floor(secs/60)}m ${secs%60}s`;
+  }, 1000);
+});
+</script>
 
 {% endblock %}

@@ -1,5 +1,9 @@
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
+from reportlab.platypus import Table, TableStyle, Paragraph
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+
 
 import docker
 
@@ -166,3 +170,60 @@ def main(args: dict) -> list[Service]:
     print("\n[nmap] Résultats enrichis :")
     print_results(services)
     return services
+
+# ── PDF render hook (used by report_engine) ──────────────────────────────────
+# Ajouter cette fonction à la fin de entry.py du module nmap.
+# Le moteur de rapport l'appellera automatiquement si elle est définie.
+
+
+def pdf_render(step: dict, module: dict, styles: dict, page_width: float):
+    """
+    Retourne une liste de Flowables ReportLab pour le rendu PDF du module nmap.
+    Appelé par report_engine.generate_pdf() si la fonction est présente dans entry.py.
+    """
+    ports = step.get("output", []) or []
+
+    if not ports:
+        return [Paragraph("Aucun port ouvert détecté.", styles["small"])]
+
+    C_ACCENT  = colors.HexColor("#00e5a0")
+    C_MUTED   = colors.HexColor("#6b6b78")
+    C_BG      = colors.HexColor("#0d0d0f")
+    C_SURFACE = colors.HexColor("#141416")
+    C_BORDER  = colors.HexColor("#2a2a2e")
+    C_TEXT    = colors.HexColor("#e8e8ec")
+
+    data = [["Port", "Proto", "Service", "Produit", "Version"]]
+    for p in ports:
+        port_val = p["port"] if isinstance(p, dict) else getattr(p, "port", "")
+        proto    = (p.get("protocol", "") if isinstance(p, dict) else getattr(p, "protocol", "")).upper()
+        name     = (p.get("name", "") if isinstance(p, dict) else getattr(p, "name", "")) or "—"
+        product  = (p.get("product", "") if isinstance(p, dict) else getattr(p, "product", "")) or "—"
+        version  = (p.get("version", "") if isinstance(p, dict) else getattr(p, "version", "")) or "—"
+        data.append([
+            Paragraph(f'<font color="#00e5a0"><b>{port_val}</b></font>', styles["mono"]),
+            Paragraph(proto, styles["mono_mut"]),
+            Paragraph(name, styles["body"]),
+            Paragraph(product, styles["small"]),
+            Paragraph(version, styles["mono_mut"]),
+        ])  # type: ignore
+
+    col_w = [18*mm, 14*mm, 32*mm, 55*mm, page_width - 119*mm]
+    tbl = Table(data, colWidths=col_w, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, 0), C_SURFACE),
+        ("TEXTCOLOR",     (0, 0), (-1, 0), C_MUTED),
+        ("FONTNAME",      (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE",      (0, 0), (-1, -1), 8),
+        ("FONTNAME",      (0, 1), (-1, -1), "Helvetica"),
+        ("TEXTCOLOR",     (0, 1), (-1, -1), C_TEXT),
+        ("BACKGROUND",    (0, 1), (-1, -1), C_BG),
+        ("ROWBACKGROUNDS",(0, 1), (-1, -1), [C_BG, colors.HexColor("#161618")]),
+        ("GRID",          (0, 0), (-1, -1), 0.4, C_BORDER),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    return [tbl]

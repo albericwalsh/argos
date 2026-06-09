@@ -5,8 +5,7 @@
 
   "inputs": {
     "target": "",
-    "severity_filter": "MEDIUM",
-    "test_mode": false
+    "severity_filter": "MEDIUM"
   },
 
   "steps": [

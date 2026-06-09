@@ -1,0 +1,86 @@
+{#
+  render.html — Argos module renderer : debug_input / debug_output
+  Context variables injected by report_engine:
+    step, step_id, step_index, module
+#}
+{% set output = step.get("output") %}
+
+<div class="mod-section debug-section">
+  <div class="mod-header" style="border-left: 3px solid var(--muted)">
+    <div class="mod-header-left">
+      <span class="mod-icon" style="opacity:.4">◈</span>
+      <div>
+        <div class="mod-name">{{ module.name if module else step_id }}</div>
+        <div class="mod-meta">{{ module.category if module else "Debug" }} · {{ step_id }}</div>
+      </div>
+    </div>
+    <span style="font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">
+      debug step
+    </span>
+  </div>
+
+  <div class="debug-body">
+    {% if output is none %}
+    <span class="debug-null">null</span>
+    {% elif output is string %}
+    <pre class="debug-pre">{{ output }}</pre>
+    {% elif output is mapping %}
+      {% for k, v in output.items() %}
+      <div class="debug-row">
+        <span class="debug-key">{{ k }}</span>
+        <span class="debug-val">{{ v | tojson }}</span>
+      </div>
+      {% endfor %}
+    {% elif output is iterable %}
+    <div class="debug-list">
+      {% for item in output %}
+      <div class="debug-item">
+        {% if item is mapping %}
+          {% for k, v in item.items() %}
+          <span class="debug-key">{{ k }}</span><span class="debug-val">{{ v }}</span>
+          {% endfor %}
+        {% else %}
+        <span class="debug-val">{{ item }}</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <pre class="debug-pre">{{ output | tojson(indent=2) }}</pre>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  .debug-body {
+    border: 1px solid var(--border); border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 12px 16px;
+    background: var(--bg);
+  }
+  .debug-pre {
+    font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+    white-space: pre-wrap; word-break: break-all; margin: 0; line-height: 1.6;
+  }
+  .debug-null {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--muted); font-style: italic;
+  }
+  .debug-row {
+    display: flex; gap: 16px; align-items: baseline;
+    padding: 5px 0; border-bottom: 1px solid rgba(42,42,46,.4);
+  }
+  .debug-row:last-child { border-bottom: none; }
+  .debug-key {
+    font-family: var(--font-mono); font-size: 10px; color: var(--accent);
+    min-width: 100px; flex-shrink: 0;
+  }
+  .debug-val { font-family: var(--font-mono); font-size: 11px; color: var(--text); }
+  .debug-list { display: flex; flex-direction: column; gap: 4px; }
+  .debug-item {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    padding: 6px 10px; border-radius: 3px;
+    background: rgba(255,255,255,.02); border: 1px solid rgba(42,42,46,.5);
+    font-family: var(--font-mono); font-size: 10px;
+  }
+</style>

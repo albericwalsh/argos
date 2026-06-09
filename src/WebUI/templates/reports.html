@@ -1,14 +1,460 @@
 {% extends "base.html" %}
 {% block content %}
-    <!-- ══════════════ PAGE : RAPPORTS (stub) ══════════════ -->
 
-      <div class="page-header">
-        <div><div class="page-title">Rapports</div><div class="page-sub">Tous les rapports générés</div></div>
-        <button class="btn btn-ghost">Exporter</button>
-      </div>
-      <div class="card" style="padding:60px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px">
-        Page en construction — les rapports apparaîtront ici
-      </div>
+<!-- ══════════════ PAGE : RAPPORTS ══════════════ -->
 
-  <!-- ton contenu ici -->
+<style>
+  /* ── Report card ── */
+  .report-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    transition: border-color .15s;
+  }
+  .report-card:hover { border-color: var(--border-hover, #3a3a3e); }
+  .report-card-id {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+  .report-card-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .report-card-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(4px);
+    z-index: 900;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 520px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modal-in .18s ease;
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: translateY(-12px) scale(.97); }
+    to   { opacity: 1; transform: none; }
+  }
+  .modal-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 2px;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .modal-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  /* ── Mission select list ── */
+  .mission-list { display: flex; flex-direction: column; gap: 6px; }
+  .mission-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color .12s, background .12s;
+    background: var(--bg);
+  }
+  .mission-option:hover  { border-color: var(--accent); background: rgba(0,229,160,.04); }
+  .mission-option.selected { border-color: var(--accent); background: rgba(0,229,160,.07); }
+  .mission-option input[type="radio"] { accent-color: var(--accent); }
+  .mission-option-id {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+  }
+  .mission-option-name { font-size: 12px; font-weight: 600; }
+  .mission-option-meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 0; right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 18px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    z-index: 999;
+    transform: translateY(150%);
+    transition: transform .2s ease;
+  }
+  .toast.show { transform: none; }
+  .toast.success { border-color: var(--accent); }
+  .toast.error   { border-color: #ff4d4d; }
+  .toast-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .toast.success .toast-dot { background: var(--accent); }
+  .toast.error   .toast-dot { background: #ff4d4d; }
+
+  /* ── Preview iframe overlay ── */
+  .preview-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.88);
+    z-index: 950;
+    flex-direction: column;
+  }
+  .preview-overlay.open { display: flex; }
+  .preview-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .preview-bar-title { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+  .preview-iframe { flex: 1; border: none; width: 100%; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    padding: 60px;
+    text-align: center;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+  }
+  .empty-state-icon { font-size: 32px; margin-bottom: 12px; opacity: .4; }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,229,160,.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: none;
+  }
+  .spinner.active { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .reports-list { display: flex; flex-direction: column; gap: 6px; }
+</style>
+
+<!-- Page header -->
+<div class="page-header">
+  <div>
+    <div class="page-title">Rapports</div>
+    <div class="page-sub">{{ reports|length }} rapport{{ 's' if reports|length != 1 }} généré{{ 's' if reports|length != 1 }}</div>
+  </div>
+  <button class="btn btn-primary" onclick="openModal()">
+    + Générer un rapport
+  </button>
+</div>
+
+<!-- Reports list -->
+{% if reports %}
+<div class="reports-list">
+  {% for r in reports %}
+  <div class="report-card" id="card-{{ r.id }}">
+    <div>
+      <div class="report-card-id">{{ r.id }}</div>
+      <div class="report-card-meta">Généré le {{ r.generated }}</div>
+    </div>
+    <div class="report-card-actions">
+      {% if r.html_file %}
+      <button class="btn btn-ghost" style="font-size:11px"
+              onclick="openPreview('{{ r.id }}')">
+        ⤢ Aperçu
+      </button>
+      {% endif %}
+      {% if r.pdf_file %}
+      <a class="btn btn-ghost" style="font-size:11px"
+         href="/reports/download/{{ r.id }}">
+        ↓ PDF
+      </a>
+      {% endif %}
+      <button class="btn btn-ghost" style="font-size:11px;color:#ff4d4d"
+              onclick="deleteReport('{{ r.id }}')">
+        ✕
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-state-icon">📄</div>
+  Aucun rapport généré — cliquez sur « Générer un rapport » pour commencer.
+</div>
+{% endif %}
+
+
+<!-- ══ MODAL : Sélection de mission ══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">// Sélectionner une mission</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      {% if missions %}
+      <div class="mission-list" id="mission-list">
+        {% for m in missions %}
+        <label class="mission-option" onclick="selectMission(this)">
+          <input type="radio" name="mission_select" value="{{ m.id }}" style="display:none">
+          <div style="flex:1">
+            <div class="mission-option-id">{{ m.id }}</div>
+            <div class="mission-option-name">{{ m.name or m.workflow }}</div>
+            <div class="mission-option-meta">
+              Workflow: {{ m.workflow }}
+              {% if m.inputs and m.inputs.target %}· Cible: {{ m.inputs.target }}{% endif %}
+            </div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent)">completed ✓</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="padding:32px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px">
+        Aucune mission complétée disponible.
+      </div>
+      {% endif %}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" id="btn-generate" onclick="generateReport()" disabled>
+        <span class="spinner" id="gen-spinner"></span>
+        Générer
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ PREVIEW OVERLAY ══ -->
+<div class="preview-overlay" id="preview-overlay">
+  <div class="preview-bar">
+    <span class="preview-bar-title" id="preview-title">Aperçu rapport</span>
+    <div style="display:flex;gap:8px">
+      <a class="btn btn-ghost" style="font-size:11px" id="preview-pdf-link">↓ PDF</a>
+      <button class="btn btn-ghost" style="font-size:11px" onclick="closePreview()">✕ Fermer</button>
+    </div>
+  </div>
+  <iframe class="preview-iframe" id="preview-iframe" src="about:blank"></iframe>
+</div>
+
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toast">
+  <span class="toast-dot"></span>
+  <span id="toast-msg"></span>
+</div>
+
+
+<script>
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function selectMission(el) {
+  document.querySelectorAll('.mission-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  el.querySelector('input[type=radio]').checked = true;
+  document.getElementById('btn-generate').disabled = false;
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function generateReport() {
+  const radio = document.querySelector('input[name="mission_select"]:checked');
+  if (!radio) return;
+
+  const btn     = document.getElementById('btn-generate');
+  const spinner = document.getElementById('gen-spinner');
+  btn.disabled  = true;
+  spinner.classList.add('active');
+
+  try {
+    const res  = await fetch('/reports/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mission_id: radio.value })
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) throw new Error(data.description || 'Erreur serveur');
+
+    closeModal();
+    showToast('Rapport généré avec succès', 'success');
+
+    // Inject new card without page reload
+    injectCard(data.report);
+  } catch (err) {
+    showToast(err.message || 'Erreur lors de la génération', 'error');
+  } finally {
+    btn.disabled = false;
+    spinner.classList.remove('active');
+  }
+}
+
+function injectCard(r) {
+  // Remove empty state if present
+  const empty = document.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  // Ensure list container exists
+  let list = document.querySelector('.reports-list');
+  if (!list) {
+    list = document.createElement('div');
+    list.className = 'reports-list';
+    document.querySelector('.page-header').insertAdjacentElement('afterend', list);
+  }
+
+  // Remove existing card with same id
+  const existing = document.getElementById('card-' + r.id);
+  if (existing) existing.remove();
+
+  const card = document.createElement('div');
+  card.className = 'report-card';
+  card.id = 'card-' + r.id;
+  card.innerHTML = `
+    <div>
+      <div class="report-card-id">${r.id}</div>
+      <div class="report-card-meta">Généré le ${r.generated}</div>
+    </div>
+    <div class="report-card-actions">
+      ${r.html_file ? `<button class="btn btn-ghost" style="font-size:11px" onclick="openPreview('${r.id}')">⤢ Aperçu</button>` : ''}
+      ${r.pdf_file  ? `<a class="btn btn-ghost" style="font-size:11px" href="/reports/download/${r.id}">↓ PDF</a>` : ''}
+      <button class="btn btn-ghost" style="font-size:11px;color:#ff4d4d" onclick="deleteReport('${r.id}')">✕</button>
+    </div>
+  `;
+  list.prepend(card);
+
+  // Update subtitle count
+  const sub = document.querySelector('.page-sub');
+  if (sub) {
+    const n = document.querySelectorAll('.report-card').length;
+    sub.textContent = `${n} rapport${n > 1 ? 's' : ''} généré${n > 1 ? 's' : ''}`;
+  }
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+function openPreview(id) {
+  document.getElementById('preview-iframe').src  = `/reports/preview/${id}`;
+  document.getElementById('preview-pdf-link').href = `/reports/download/${id}`;
+  document.getElementById('preview-title').textContent = `Aperçu — ${id}`;
+  document.getElementById('preview-overlay').classList.add('open');
+}
+function closePreview() {
+  document.getElementById('preview-overlay').classList.remove('open');
+  document.getElementById('preview-iframe').src = 'about:blank';
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+async function deleteReport(id) {
+  if (!confirm(`Supprimer le rapport ${id} ?`)) return;
+  try {
+    const res = await fetch(`/reports/delete/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.ok) throw new Error();
+    const card = document.getElementById('card-' + id);
+    if (card) card.remove();
+    showToast('Rapport supprimé', 'success');
+    // Update count
+    const sub = document.querySelector('.page-sub');
+    if (sub) {
+      const n = document.querySelectorAll('.report-card').length;
+      sub.textContent = `${n} rapport${n > 1 ? 's' : ''} généré${n > 1 ? 's' : ''}`;
+      if (n === 0) {
+        const list = document.querySelector('.reports-list');
+        if (list) {
+          list.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">📄</div>
+              Aucun rapport généré — cliquez sur « Générer un rapport » pour commencer.
+            </div>`;
+        }
+      }
+    }
+  } catch {
+    showToast('Erreur lors de la suppression', 'error');
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.className = `toast ${type}`;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closePreview(); }
+});
+</script>
+
 {% endblock %}

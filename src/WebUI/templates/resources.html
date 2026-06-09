@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .res-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+  }
+  .res-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color .15s;
+  }
+  .res-card:hover { border-color: var(--border-hover, #3a3a3e); }
+  .res-icon {
+    width: 36px; height: 36px; flex-shrink: 0;
+    border-radius: 4px;
+    background: rgba(0,229,160,.08);
+    border: 1px solid rgba(0,229,160,.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    color: var(--accent);
+  }
+  .res-info { flex: 1; min-width: 0; }
+  .res-name {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .res-meta { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .res-path {
+    font-family: var(--font-mono); font-size: 9px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 2px; opacity: .7;
+  }
+  .res-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  /* Drop zone */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 4px;
+    padding: 36px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .upload-zone:hover,
+  .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(0,229,160,.04);
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 28px; opacity: .3; margin-bottom: 8px; }
+  .upload-label {
+    font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+  }
+  .upload-hint {
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    margin-top: 4px; opacity: .6;
+  }
+  .upload-progress {
+    display: none;
+    margin-top: 10px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .upload-progress-bar {
+    height: 100%; width: 0%; background: var(--accent);
+    border-radius: 2px; transition: width .3s ease;
+  }
+
+  .empty-state {
+    padding: 40px; text-align: center; color: var(--muted);
+    font-family: var(--font-mono); font-size: 12px;
+    border: 1px dashed var(--border); border-radius: 4px;
+  }
+</style>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">Ressources</div>
+    <div class="page-sub">Fichiers disponibles dans <span class="mono">data/ressources/</span></div>
+  </div>
+</div>
+
+{# ── Zone d'upload ── #}
+<div class="upload-zone" id="upload-zone"
+     ondragover="event.preventDefault();this.classList.add('drag-over')"
+     ondragleave="this.classList.remove('drag-over')"
+     ondrop="handleDrop(event)">
+  <input type="file" id="file-input" multiple
+         accept=".txt,.json,.csv,.xml,.lst,.wordlist,.conf,.yaml,.yml"
+         onchange="handleFiles(this.files)">
+  <div class="upload-icon">⬆</div>
+  <div class="upload-label">Glissez vos fichiers ici ou <span style="color:var(--accent)">cliquez pour parcourir</span></div>
+  <div class="upload-hint">.txt · .json · .csv · .xml · .lst · .conf · .yaml — max 50 MB</div>
+  <div class="upload-progress" id="upload-progress">
+    <div class="upload-progress-bar" id="upload-bar"></div>
+  </div>
+</div>
+
+{# ── Liste des ressources ── #}
+<div id="res-container">
+{% if resources %}
+<div class="res-grid" id="res-grid">
+  {% for r in resources %}
+  <div class="res-card" id="res-{{ r.name | replace('.','_') | replace('/','_') }}">
+    <div class="res-icon">{{ r.ext[1:].upper()[:4] if r.ext else 'FILE' }}</div>
+    <div class="res-info">
+      <div class="res-name" title="{{ r.name }}">{{ r.name }}</div>
+      <div class="res-meta">{{ r.size_str }}</div>
+      <div class="res-path" title="{{ r.path }}">{{ r.path }}</div>
+    </div>
+    <div class="res-actions">
+      <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px"
+              onclick="copyPath('{{ r.path }}')" title="Copier le chemin">⎘</button>
+      <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;color:#ff4d4d"
+              onclick="deleteResource('{{ r.name }}')" title="Supprimer">✕</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" id="empty-state">
+  Aucune ressource — glissez un fichier ci-dessus pour commencer
+</div>
+{% endif %}
+</div>
+
+<script>
+// ── Upload ────────────────────────────────────────────────────────────────────
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+}
+
+async function handleFiles(files) {
+  if (!files || files.length === 0) return;
+  const prog  = document.getElementById('upload-progress');
+  const bar   = document.getElementById('upload-bar');
+  prog.style.display = 'block';
+
+  for (let i = 0; i < files.length; i++) {
+    bar.style.width = Math.round((i / files.length) * 80) + '%';
+    await uploadFile(files[i]);
+  }
+  bar.style.width = '100%';
+  setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0%'; }, 600);
+  await refreshList();
+}
+
+async function uploadFile(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res  = await fetch('/resources/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) showToast('Erreur : ' + (data.error || 'inconnue'), 'error');
+    else showToast(`${file.name} importé (${data.size_str})`, 'success');
+  } catch(e) {
+    showToast('Erreur réseau : ' + e.message, 'error');
+  }
+}
+
+// ── Refresh ───────────────────────────────────────────────────────────────────
+
+async function refreshList() {
+  const res  = await fetch('/resources/list');
+  const list = await res.json();
+  const grid = document.getElementById('res-grid') || (() => {
+    const g = document.createElement('div');
+    g.className = 'res-grid'; g.id = 'res-grid';
+    document.getElementById('res-container').innerHTML = '';
+    document.getElementById('res-container').appendChild(g);
+    return g;
+  })();
+
+  const empty = document.getElementById('empty-state');
+  if (list.length === 0) {
+    grid.innerHTML = '';
+    if (!empty) {
+      document.getElementById('res-container').innerHTML =
+        '<div class="empty-state" id="empty-state">Aucune ressource — glissez un fichier ci-dessus pour commencer</div>';
+    }
+    return;
+  }
+  if (empty) empty.remove();
+
+  grid.innerHTML = list.map(r => `
+    <div class="res-card" id="res-${r.name.replace(/[^a-z0-9]/gi,'_')}">
+      <div class="res-icon">${(r.ext||'').slice(1).toUpperCase().slice(0,4) || 'FILE'}</div>
+      <div class="res-info">
+        <div class="res-name" title="${r.name}">${r.name}</div>
+        <div class="res-meta">${r.size_str}</div>
+        <div class="res-path" title="${r.path}">${r.path}</div>
+      </div>
+      <div class="res-actions">
+        <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px"
+                onclick="copyPath('${r.path.replace(/\\/g,'\\\\')}')" title="Copier le chemin">⎘</button>
+        <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;color:#ff4d4d"
+                onclick="deleteResource('${r.name}')" title="Supprimer">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+
+async function deleteResource(name) {
+  if (!confirm(`Supprimer "${name}" ?`)) return;
+  const res = await fetch(`/resources/${encodeURIComponent(name)}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) { showToast(`${name} supprimé`, 'success'); await refreshList(); }
+  else showToast('Erreur : ' + (data.error || 'inconnue'), 'error');
+}
+
+function copyPath(path) {
+  navigator.clipboard.writeText(path).then(() => showToast('Chemin copié', 'success'));
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+
+let _toastT;
+function showToast(msg, type='success') {
+  let t = document.getElementById('__toast');
+  if (!t) {
+    t = document.createElement('div'); t.id = '__toast';
+    t.style.cssText = `position:fixed;bottom:24px;right:24px;
+      background:var(--surface);border:1px solid var(--border);border-radius:4px;
+      padding:10px 16px;font-family:var(--font-mono);font-size:11px;
+      display:flex;gap:8px;align-items:center;z-index:9999;
+      transform:translateY(120%);transition:transform .2s ease;`;
+    document.body.appendChild(t);
+  }
+  const dot = `<span style="width:6px;height:6px;border-radius:50%;background:${type==='success'?'var(--accent)':'#ff4d4d'};flex-shrink:0"></span>`;
+  t.innerHTML = dot + `<span>${msg}</span>`;
+  t.style.borderColor = type === 'success' ? 'var(--accent)' : '#ff4d4d';
+  t.style.transform = 'none';
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => t.style.transform = 'translateY(120%)', 3200);
+}
+</script>
+
+{% endblock %}

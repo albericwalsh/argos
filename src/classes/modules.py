@@ -22,7 +22,7 @@ class Module:
         self.entry_arg = module_file.get('entry_arg')
         # Chargement dynamique du entry.py
         entry_path = os.path.join(directory, 'entry.py')
-
+        self.parameters = module_file.get('parameters', [])
         self.entry = self.load_entry(entry_path)
 
     def load_entry(self, entry_path):

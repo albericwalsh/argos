@@ -1,64 +1,122 @@
-import os
+import json
 import docker
-from dataclasses import dataclass
-from src.variables import APP_DIR
+from dataclasses import dataclass, field
 
 DOCKER_IMAGE = "argos-spiderfoot"
 
+
 @dataclass
 class SpiderFootEvent:
-    type: str
-    source: str
-    data: str
+    type:      str
+    source:    str
+    data:      str
+    module:    str = ""
     timestamp: str = ""
 
-def stream_logs(container):
-    for line in container.logs(stream=True, follow=True):
-        print("[SPIDERFOOT]", line.decode().rstrip())
 
-def parse_args(args: list[str]):
-    target = None
-    modules = "all"
+# ── Parsing ───────────────────────────────────────────────────────────────────
 
-    i = 0
-    while i < len(args):
+def parse_output(raw: str) -> list[SpiderFootEvent]:
+    """
+    SpiderFoot -o JSON sort une liste d'objets JSON, un par ligne ou en bloc.
+    Chaque objet a les clés : type, source, data, module, generated.
+    """
+    events = []
 
-        arg = args[i]
+    # Tentative bloc JSON complet
+    raw = raw.strip()
+    if raw.startswith("["):
+        try:
+            items = json.loads(raw)
+            for item in items:
+                events.append(SpiderFootEvent(
+                    type      = item.get("type", ""),
+                    source    = item.get("source", ""),
+                    data      = item.get("data", ""),
+                    module    = item.get("module", ""),
+                    timestamp = item.get("generated", ""),
+                ))
+            return events
+        except Exception:
+            pass
 
-        if arg in ("--help", "-h"):
-            print("Usage: --target \"example.com\" --modules sfp_dnsresolve")
-            return None, None
+    # Fallback : JSON line-by-line
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line or not line.startswith("{"):
+            continue
+        try:
+            item = json.loads(line)
+            events.append(SpiderFootEvent(
+                type      = item.get("type", ""),
+                source    = item.get("source", ""),
+                data      = item.get("data", ""),
+                module    = item.get("module", ""),
+                timestamp = item.get("generated", ""),
+            ))
+        except Exception:
+            pass
 
-        elif arg in ("--target", "-t"):
-            target = args[i + 1].strip('"')
-            i += 1
+    return events
 
-        elif arg in ("--modules", "-m"):
-            modules = args[i + 1]
-            i += 1
 
-        i += 1
+def print_results(events: list[SpiderFootEvent]) -> None:
+    print(f"\n{'TYPE':<30} {'MODULE':<25} DATA")
+    print("-" * 100)
+    for e in events:
+        print(f"{e.type:<30} {e.module:<25} {e.data[:60]}")
+    if not events:
+        print("  Aucun événement trouvé.")
+    print()
 
-    return target, modules
 
-def main(args):
-    target, modules = parse_args(args)
+# ── Point d'entrée Argos ──────────────────────────────────────────────────────
+
+def main(args: dict) -> list[SpiderFootEvent]:
+    """
+    Appelé par le moteur Argos avec :
+      {
+        "target":  "example.com"   # IP, domaine, email, sous-réseau...
+        "modules": "sfp_dnsresolve,sfp_ssl"   # optionnel, défaut = "all"
+      }
+    """
+    target  = args.get("target",  "")
+    modules = args.get("modules", "all") or "all"
+
+    # Robustesse : le moteur peut injecter une liste
+    if isinstance(target,  list): target  = target[0]  if target  else ""
+    # modules peut être une liste ["sfp_googlesearch", "sfp_bing", ...] → joindre en CSV
+    if isinstance(modules, list): modules = ",".join(str(m) for m in modules) if modules else "all"
+
+    target  = str(target).strip()
+    modules = str(modules).strip() or "all"
 
     if not target:
-        print("Target required")
+        print("[spiderfoot] ERROR: No target provided.")
         return []
-    if not modules:
-        modules = "all"
 
     client = docker.from_env()
 
+    print(f"[spiderfoot] Scan de '{target}' avec modules='{modules}'")
+
     container = client.containers.run(
-        image=DOCKER_IMAGE,
-        command=["-s", target, "-m", modules],
-        detach=True,
-        remove=True
-    ) # type: ignore[call-arg]
+        image        = DOCKER_IMAGE,
+        command      = ["-s", target, "-m", modules, "-o", "json"],
+        detach       = True,
+        remove       = False,
+        network_mode = "host",
+    )
 
-    stream_logs(container)
+    # Stream des logs en temps réel
+    for line in container.logs(stream=True, follow=True):
+        decoded = line.decode().rstrip()
+        if decoded:
+            print(f"[spiderfoot] {decoded}")
 
-    return []
+    container.wait()
+    stdout = container.logs(stdout=True, stderr=False).decode("utf-8")
+    container.remove()
+
+    events = parse_output(stdout)
+    print_results(events)
+    return events

@@ -1,31 +1,174 @@
-
 {% extends "base.html" %}
 {% block content %}
-  <!-- ton contenu ici -->
-    <!-- ══════════════ PAGE : WORKFLOWS (stub) ══════════════ -->
+<!-- ══════════════ PAGE : WORKFLOWS ══════════════ -->
 
-      <div class="page-header">
-        <div><div class="page-title">Workflows</div><div class="page-sub">Registre des workflows</div></div>
-        <button class="btn btn-primary" href="/builder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Créer un workflow
-        </button>
+<style>
+  .wf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+  }
+  .wf-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color .15s;
+  }
+  .wf-card:hover { border-color: var(--border-hover, #3a3a3e); }
+  .wf-card-header { display: flex; align-items: flex-start; gap: 12px; }
+  .wf-card-icon {
+    width: 36px; height: 36px;
+    border-radius: 4px;
+    background: rgba(0,229,160,.1);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .wf-card-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .wf-card-id   { font-family: var(--font-mono); font-size: 10px; color: var(--accent); }
+  .wf-card-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  .wf-card-steps {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .wf-step-pill {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .wf-step-arrow { color: var(--muted); font-size: 10px; }
+
+  .wf-card-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .wf-input-pill {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(0,229,160,.07);
+    border: 1px solid rgba(0,229,160,.2);
+    color: var(--accent);
+  }
+
+  .wf-card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  .empty-state {
+    padding: 60px;
+    text-align: center;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+  }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: .3; }
+</style>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">Workflows</div>
+    <div class="page-sub">{{ WORKFLOWS | length }} workflow{{ 's' if WORKFLOWS | length != 1 }} enregistré{{ 's' if WORKFLOWS | length != 1 }}</div>
+  </div>
+  <a class="btn btn-primary" href="/builder">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Créer un workflow
+  </a>
+</div>
+
+{% if WORKFLOWS %}
+<div class="wf-grid">
+  {% for wf in WORKFLOWS %}
+  <div class="wf-card">
+    <div class="wf-card-header">
+      <div class="wf-card-icon">{{ wf.name[:2].upper() }}</div>
+      <div style="flex:1;min-width:0">
+        <div class="wf-card-name">{{ wf.name }}</div>
+        <div class="wf-card-id">{{ wf.id }}</div>
       </div>
-      <div class="card" style="padding:60px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px">
-        {% for workflow in WORKFLOWS %}
-        <div class="module-item">
-          <div class="module-icon green">{{ workflow.name[:2].upper() }}</div>
-          <div class="module-info">
-            <div class="module-name">{{ workflow.name }}</div>
-            <div class="module-desc">{{ workflow.description }}</div>
-          </div>
-          <div class="module-tag">{{ workflow.category }}</div>
-        </div>
-        {% else %}
-        <div style="padding:40px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px">
-          Aucun workflow créé
-        </div>
-        {% endfor %}
-      </div>
+    </div>
+
+    {% if wf.description %}
+    <div class="wf-card-desc">{{ wf.description }}</div>
+    {% endif %}
+
+    <!-- Steps pipeline -->
+    {% if wf.raw_steps %}
+    <div class="wf-card-steps">
+      {% for step in wf.raw_steps %}
+      {% if not loop.first %}<span class="wf-step-arrow">→</span>{% endif %}
+      <span class="wf-step-pill">{{ step.module }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Inputs -->
+    {% if wf.entry_args %}
+    <div class="wf-card-inputs">
+      {% for k in wf.entry_args %}
+      <span class="wf-input-pill">{{ k }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="wf-card-actions">
+      <a class="btn btn-primary" style="font-size:11px;padding:5px 12px" href="/run/{{ wf.id }}">
+        ▶ Lancer
+      </a>
+      <a class="btn btn-ghost" style="font-size:11px;padding:5px 12px" href="/builder?load={{ wf.id }}">
+        ✎ Éditer
+      </a>
+      <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px;color:#ff4d4d;margin-left:auto"
+              onclick="deleteWorkflow('{{ wf.id }}', '{{ wf.name }}')">
+        ✕
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">⬡</div>
+  Aucun workflow créé —
+  <a href="/builder" style="color:var(--accent)">créer le premier</a>
+</div>
+{% endif %}
+
+<script>
+async function deleteWorkflow(id, name) {
+  if (!confirm(`Supprimer le workflow "${name}" ?`)) return;
+  try {
+    const res = await fetch(`/workflows/delete/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Erreur');
+    location.reload();
+  } catch(e) {
+    alert('Erreur : ' + e.message);
+  }
+}
+</script>
 
 {% endblock %}

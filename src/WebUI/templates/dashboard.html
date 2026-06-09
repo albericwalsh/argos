@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 {% block content %}
 {% if missions | selectattr('status', 'eq', 'running') | list %}
@@ -35,8 +34,10 @@
         </div>
         <div class="kpi-card warn">
           <div class="kpi-label">Rapports générés</div>
-          <div class="kpi-value">à faire</div>
-          <div class="kpi-trend">Dernier: il y a 2h</div>
+          <div class="kpi-value">{{ reports | length }}</div>
+          <div class="kpi-trend">
+            {%- if reports %}Dernier: {{ reports[0].generated }}{% else %}Aucun rapport{% endif -%}
+          </div>
           <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16h16V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
         </div>
         <div class="kpi-card danger">
@@ -99,30 +100,37 @@
             <div class="card-body" style="padding:0">
               <table class="data-table">
                 <thead><tr>
-                  <th>Rapport</th><th>Mission</th><th>Format</th><th>Date</th><th></th>
+                  <th>Rapport</th><th>Généré le</th><th>Formats</th><th></th>
                 </tr></thead>
                 <tbody>
+                  {% for r in reports %}
                   <tr>
-                    <td>Recon — example.com</td>
-                    <td class="mono">#MSN-044</td>
-                    <td><span class="badge" style="background:rgba(167,139,250,.1);color:#a78bfa">PDF</span></td>
-                    <td class="dim">Aujourd'hui 14:32</td>
-                    <td><button class="btn btn-ghost" style="padding:3px 8px;font-size:10px">↓</button></td>
+                    <td class="mono" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                      {{ r.id }}
+                    </td>
+                    <td class="dim">{{ r.generated }}</td>
+                    <td style="display:flex;gap:4px;align-items:center;padding-top:10px">
+                      {% if r.html_file %}
+                      <span class="badge" style="background:rgba(0,229,160,.1);color:var(--accent)">HTML</span>
+                      {% endif %}
+                      {% if r.pdf_file %}
+                      <span class="badge" style="background:rgba(167,139,250,.1);color:#a78bfa">PDF</span>
+                      {% endif %}
+                    </td>
+                    <td style="white-space:nowrap">
+                      {% if r.html_file %}
+                      <a class="btn btn-ghost" style="padding:3px 8px;font-size:10px" href="/reports/preview/{{ r.id }}" target="_blank">⤢</a>
+                      {% endif %}
+                      {% if r.pdf_file %}
+                      <a class="btn btn-ghost" style="padding:3px 8px;font-size:10px" href="/reports/download/{{ r.id }}">↓</a>
+                      {% endif %}
+                    </td>
                   </tr>
-                  <tr>
-                    <td>Recon — shop.acme.org</td>
-                    <td class="mono">#MSN-041</td>
-                    <td><span class="badge" style="background:rgba(0,229,160,.1);color:var(--accent)">JSON</span></td>
-                    <td class="dim">Hier 09:18</td>
-                    <td><button class="btn btn-ghost" style="padding:3px 8px;font-size:10px">↓</button></td>
-                  </tr>
-                  <tr>
-                    <td>Port Scan — LAN</td>
-                    <td class="mono">#MSN-038</td>
-                    <td><span class="badge" style="background:rgba(0,153,255,.1);color:var(--accent2)">CSV</span></td>
-                    <td class="dim">12/06 11:45</td>
-                    <td><button class="btn btn-ghost" style="padding:3px 8px;font-size:10px">↓</button></td>
-                  </tr>
+                  {% else %}
+                  <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">
+                    Aucun rapport — <a href="/reports" style="color:var(--accent)">en générer un</a>
+                  </td></tr>
+                  {% endfor %}
                 </tbody>
               </table>
             </div>

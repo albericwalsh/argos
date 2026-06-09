@@ -1,0 +1,201 @@
+{#
+  render.html — Argos module renderer : spiderfoot
+  Context variables injected by report_engine:
+    step       : dict  — the raw step data from mission result
+    step_id    : str   — e.g. "step1"
+    step_index : int   — 0-based index
+    module     : dict  — parsed module.json
+#}
+{% set events = (step.get("output") or []) | tojson | fromjson %}
+
+{# Compteurs par type de données #}
+{% set types = [] %}
+{% for e in events %}
+  {% set t = e.get("type", "") %}
+  {% if t not in types %}{% set _ = types.append(t) %}{% endif %}
+{% endfor %}
+
+{# Groupe par type pour les stats visuelles — on prend les 4 plus fréquents #}
+{% set type_counts = {} %}
+{% for e in events %}
+  {% set t = e.get("type", "UNKNOWN") %}
+  {% if t in type_counts %}
+    {% set _ = type_counts.update({t: type_counts[t] + 1}) %}
+  {% else %}
+    {% set _ = type_counts.update({t: 1}) %}
+  {% endif %}
+{% endfor %}
+
+<div class="mod-section sf-section">
+  <div class="mod-header">
+    <div class="mod-header-left">
+      <span class="mod-icon">◈</span>
+      <div>
+        <div class="mod-name">{{ module.name }}</div>
+        <div class="mod-meta">{{ module.category }} · {{ step_id }}</div>
+      </div>
+    </div>
+    <div class="mod-stats">
+      <div class="mod-stat">
+        <span class="mod-stat-num" style="color:var(--accent)">{{ events | length }}</span>
+        <span class="mod-stat-lbl">événements</span>
+      </div>
+      <div class="mod-stat">
+        <span class="mod-stat-num">{{ types | length }}</span>
+        <span class="mod-stat-lbl">types distincts</span>
+      </div>
+      {# Modules uniques #}
+      {% set modules_seen = [] %}
+      {% for e in events %}
+        {% if e.get("module","") and e.get("module","") not in modules_seen %}
+          {% set _ = modules_seen.append(e.get("module","")) %}
+        {% endif %}
+      {% endfor %}
+      <div class="mod-stat">
+        <span class="mod-stat-num">{{ modules_seen | length }}</span>
+        <span class="mod-stat-lbl">modules actifs</span>
+      </div>
+    </div>
+  </div>
+
+  {% if events %}
+
+  {# ── Résumé par type ── #}
+  {% if types %}
+  <div class="sf-type-bar">
+    {% for t in types %}
+    {% set count = type_counts.get(t, 0) %}
+    <div class="sf-type-chip" onclick="filterType('{{ step_id }}', '{{ t }}')">
+      <span class="sf-type-name">{{ t }}</span>
+      <span class="sf-type-count">{{ count }}</span>
+    </div>
+    {% endfor %}
+    <div class="sf-type-chip sf-type-all active" onclick="filterType('{{ step_id }}', '')">
+      <span class="sf-type-name">Tous</span>
+      <span class="sf-type-count">{{ events | length }}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="table-wrap">
+    <table class="mod-table sf-table" id="sftable-{{ step_id }}">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Module</th>
+          <th>Donnée</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr class="sf-row" data-type="{{ e.get('type','') }}">
+          <td>
+            <span class="sf-type-badge">{{ e.get("type", "—") }}</span>
+          </td>
+          <td class="cell-mono cell-muted">{{ e.get("module", "—") }}</td>
+          <td class="sf-data">{{ e.get("data", "—") }}</td>
+          <td class="cell-muted sf-source">{{ e.get("source", "—") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <div class="mod-empty">Aucun événement collecté.</div>
+  {% endif %}
+</div>
+
+<style>
+  .sf-section .mod-header { border-left: 3px solid var(--accent); }
+
+  /* ── Type chips ── */
+  .sf-type-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+  }
+  .sf-type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    cursor: pointer;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    transition: all .12s;
+    user-select: none;
+  }
+  .sf-type-chip:hover,
+  .sf-type-chip.active { background: rgba(0,229,160,.1); border-color: rgba(0,229,160,.3); color: var(--accent); }
+  .sf-type-all         { background: rgba(0,229,160,.06); border-color: rgba(0,229,160,.2); color: var(--accent); }
+  .sf-type-name        { text-transform: uppercase; letter-spacing: .07em; }
+  .sf-type-count {
+    background: rgba(255,255,255,.07);
+    border-radius: 2px;
+    padding: 0 4px;
+    font-size: 8px;
+    color: var(--text);
+  }
+
+  /* ── Table ── */
+  .sf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .sf-table th {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 12px;
+    text-align: left; background: var(--surface2, #1c1c20);
+    border-bottom: 1px solid var(--border);
+  }
+  .sf-table td {
+    padding: 8px 12px; border-bottom: 1px solid rgba(42,42,46,.5); vertical-align: top;
+  }
+  .sf-table tr:last-child td { border-bottom: none; }
+  .sf-table tr:hover td { background: rgba(255,255,255,.015); }
+  .sf-row.hidden { display: none; }
+
+  .sf-type-badge {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    color: var(--accent); background: rgba(0,229,160,.08);
+    border: 1px solid rgba(0,229,160,.2); border-radius: 3px;
+    padding: 2px 6px; white-space: nowrap; text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .sf-data   { color: var(--text);  font-size: 11px; word-break: break-all; max-width: 360px; }
+  .sf-source { font-size: 10px; max-width: 200px; word-break: break-all; }
+  .cell-muted { color: var(--muted); font-size: 11px; }
+  .cell-mono  { font-family: var(--font-mono); }
+</style>
+
+<script>
+(function() {
+  function filterType(stepId, type) {
+    const table = document.getElementById('sftable-' + stepId);
+    if (!table) return;
+
+    // Mise à jour chips
+    const bar = table.closest('.mod-section').querySelector('.sf-type-bar');
+    if (bar) {
+      bar.querySelectorAll('.sf-type-chip').forEach(c => c.classList.remove('active'));
+      const target = type
+        ? [...bar.querySelectorAll('.sf-type-chip')].find(c => c.querySelector('.sf-type-name').textContent === type)
+        : bar.querySelector('.sf-type-all');
+      if (target) target.classList.add('active');
+    }
+
+    // Filtrage lignes
+    table.querySelectorAll('.sf-row').forEach(row => {
+      row.classList.toggle('hidden', type !== '' && row.dataset.type !== type);
+    });
+  }
+  window.filterType = filterType;
+})();
+</script>

@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="/missions" class="btn btn-ghost" style="padding:6px 10px">← Retour</a>
+    <div>
+      <div class="page-title" id="mission-name">Chargement…</div>
+      <div class="page-sub mono" id="mission-id">{{ mission_id }}</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span id="mission-badge" class="badge badge-pending">—</span>
+    <span id="mission-duration" class="dim" style="font-size:11px"></span>
+  </div>
+</div>
+
+{# ── Barre de progression globale ── #}
+<div class="card" style="margin-bottom:20px">
+  <div style="padding:16px 20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">
+        Progression globale
+      </span>
+      <span id="global-percent" style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent)">0%</span>
+    </div>
+    <div style="background:var(--border);border-radius:3px;height:4px;overflow:hidden">
+      <div id="global-bar" style="height:100%;width:0%;background:var(--accent);border-radius:3px;transition:width .4s ease"></div>
+    </div>
+  </div>
+
+  {# Pipeline des steps #}
+  <div style="padding:0 20px 16px;display:flex;align-items:center;gap:0;overflow-x:auto" id="pipeline">
+  </div>
+</div>
+
+{# ── Steps détail ── #}
+<div id="steps-container"></div>
+
+{# Templates JS #}
+<template id="tpl-step">
+  <div class="card step-card" data-step-id="" style="margin-bottom:16px">
+    <div class="card-header" style="cursor:pointer" onclick="toggleStep(this)">
+      <div style="display:flex;align-items:center;gap:10px;flex:1">
+        <div class="step-spinner" style="display:none">
+          <div class="spinner"></div>
+        </div>
+        <div class="step-icon" style="font-size:14px"></div>
+        <div>
+          <div class="card-title" style="margin:0">
+            <span class="step-id" style="font-family:var(--font-mono);font-size:12px"></span>
+            <span class="step-module" style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-left:8px"></span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="step-badge badge"></span>
+        <span class="step-duration dim" style="font-size:11px"></span>
+        <span class="step-chevron" style="color:var(--muted);font-size:11px;transition:transform .15s">▾</span>
+      </div>
+    </div>
+    <div class="step-body" style="display:none">
+      <div class="card-body" style="padding:0">
+        <div class="step-logs" style="
+          font-family:var(--font-mono);font-size:11px;color:var(--muted);
+          background:var(--bg);padding:14px 18px;
+          max-height:320px;overflow-y:auto;
+          border-top:1px solid var(--border);
+          line-height:1.7;
+        "></div>
+        <div class="step-error" style="display:none;padding:12px 18px;
+          background:rgba(255,77,77,.06);border-top:1px solid rgba(255,77,77,.2);
+          font-family:var(--font-mono);font-size:11px;color:#ff4d4d">
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+  /* Spinner */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,229,160,.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Steps */
+  .step-card { transition: border-color .2s; }
+  .step-card[data-status="running"]   { border-color: rgba(0,229,160,.4); }
+  .step-card[data-status="failed"]    { border-color: rgba(255,77,77,.35); }
+  .step-card[data-status="completed"] { border-color: rgba(0,229,160,.2); }
+
+  /* Pipeline */
+  .pipe-step {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    white-space: nowrap; transition: all .2s;
+  }
+  .pipe-step:first-child { border-radius: 4px 0 0 4px; }
+  .pipe-step:last-child  { border-radius: 0 4px 4px 0; }
+  .pipe-step + .pipe-step { border-left: none; }
+  .pipe-step[data-status="running"]   { background: rgba(0,229,160,.08); border-color: rgba(0,229,160,.35); color: var(--accent); }
+  .pipe-step[data-status="completed"] { background: rgba(0,229,160,.05); color: var(--accent); opacity: .7; }
+  .pipe-step[data-status="failed"]    { background: rgba(255,77,77,.08);  border-color: rgba(255,77,77,.3);  color: #ff4d4d; }
+  .pipe-arrow { color: var(--muted); font-size: 11px; }
+
+  /* Logs scroll auto */
+  .step-logs { scroll-behavior: smooth; }
+  .log-line  { display: block; }
+  .log-line.accent { color: var(--accent); }
+  .log-line.error  { color: #ff4d4d; }
+</style>
+
+<script>
+const MISSION_ID = {{ mission_id | tojson }};
+const stepCards  = {};   // step_id → DOM card
+const stepData   = {};   // step_id → { status, logs, error, started }
+let   startTime  = null;
+let   durationTimer = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+function initSteps(steps) {
+  const container = document.getElementById('steps-container');
+  const pipeline  = document.getElementById('pipeline');
+  container.innerHTML = '';
+  pipeline.innerHTML  = '';
+
+  steps.forEach((step, i) => {
+    // Pipeline
+    if (i > 0) pipeline.insertAdjacentHTML('beforeend', '<span class="pipe-arrow">→</span>');
+    pipeline.insertAdjacentHTML('beforeend',
+      `<div class="pipe-step" id="pipe-${CSS.escape(step.id)}" data-status="${step.status}">
+        <span class="pipe-dot"></span>${step.id}
+      </div>`
+    );
+
+    // Card
+    const tpl  = document.getElementById('tpl-step').content.cloneNode(true);
+    const card = tpl.querySelector('.step-card');
+    card.dataset.stepId = step.id;
+    card.dataset.status = step.status;
+    card.querySelector('.step-id').textContent     = step.id;
+    card.querySelector('.step-module').textContent = step.module ? `· ${step.module}` : '';
+    updateStepUI(card, step);
+    container.appendChild(tpl);
+    stepCards[step.id] = document.querySelector(`.step-card[data-step-id="${CSS.escape(step.id)}"]`);
+    stepData[step.id]  = step;
+
+    // Auto-expand le step running
+    if (step.status === 'running') expandStep(stepCards[step.id]);
+
+    // Rejoue les logs déjà présents
+    if (step.logs?.length) {
+      step.logs.forEach(l => appendLog(step.id, l));
+    }
+  });
+}
+
+// ── Mise à jour UI step ───────────────────────────────────────────────────────
+
+function updateStepUI(card, step) {
+  if (!card) return;
+  card.dataset.status = step.status;
+
+  const spinner = card.querySelector('.step-spinner');
+  const icon    = card.querySelector('.step-icon');
+  const badge   = card.querySelector('.step-badge');
+  const errEl   = card.querySelector('.step-error');
+
+  // Spinner / icône
+  if (step.status === 'running') {
+    spinner.style.display = 'flex';
+    icon.textContent = '';
+  } else {
+    spinner.style.display = 'none';
+    icon.textContent = step.status === 'completed' ? '✓' :
+                       step.status === 'failed'    ? '✕' : '○';
+    icon.style.color = step.status === 'completed' ? 'var(--accent)' :
+                       step.status === 'failed'    ? '#ff4d4d' : 'var(--muted)';
+  }
+
+  // Badge
+  badge.className = 'step-badge badge ' + {
+    pending:   'badge-pending',
+    running:   'badge-running',
+    completed: 'badge-success',
+    failed:    'badge-error',
+  }[step.status] || 'badge-pending';
+  badge.textContent = {
+    pending: 'En attente', running: 'En cours',
+    completed: 'Succès', failed: 'Erreur',
+  }[step.status] || step.status;
+
+  // Pipeline
+  const pipe = document.getElementById(`pipe-${CSS.escape(step.id)}`);
+  if (pipe) pipe.dataset.status = step.status;
+
+  // Erreur
+  if (step.error) {
+    errEl.style.display = 'block';
+    errEl.textContent   = '⚠ ' + step.error;
+  }
+}
+
+function appendLog(step_id, message) {
+  const card = stepCards[step_id];
+  if (!card) return;
+  const logs = card.querySelector('.step-logs');
+  const line = document.createElement('span');
+  line.className = 'log-line' +
+    (message.includes('ERROR') || message.includes('error') ? ' error' : '') +
+    (message.includes('[nmap]') || message.includes('[ffuf]') || message.includes('[vuln') || message.includes('[spider') ? ' accent' : '');
+  line.textContent = message;
+  logs.appendChild(line);
+  logs.appendChild(document.createElement('br'));
+  logs.scrollTop = logs.scrollHeight;
+}
+
+// ── Toggle expand/collapse ────────────────────────────────────────────────────
+
+function toggleStep(header) {
+  const card   = header.closest('.step-card');
+  const body   = card.querySelector('.step-body');
+  const chevron = card.querySelector('.step-chevron');
+  const open   = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function expandStep(card) {
+  if (!card) return;
+  card.querySelector('.step-body').style.display   = 'block';
+  card.querySelector('.step-chevron').style.transform = 'rotate(180deg)';
+}
+
+// ── Mission badge / header ────────────────────────────────────────────────────
+
+function setMissionStatus(status, name, workflow) {
+  document.getElementById('mission-name').textContent = name || MISSION_ID;
+  document.title = `Argos — ${name || MISSION_ID}`;
+
+  const badge = document.getElementById('mission-badge');
+  const map   = { running: ['badge-running','En cours'], completed: ['badge-success','Succès'],
+                  failed: ['badge-error','Erreur'], pending: ['badge-pending','En attente'] };
+  const [cls, label] = map[status] || map.pending;
+  badge.className   = 'badge ' + cls;
+  badge.textContent = label;
+}
+
+function setPercent(pct) {
+  document.getElementById('global-percent').textContent = pct + '%';
+  document.getElementById('global-bar').style.width = pct + '%';
+  if (pct === 100) {
+    document.getElementById('global-bar').style.background = '#00e5a0';
+  }
+}
+
+function startDurationClock(isoStart) {
+  startTime = new Date(isoStart);
+  durationTimer = setInterval(() => {
+    const secs = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('mission-duration').textContent =
+      `${Math.floor(secs/60)}m ${secs%60}s`;
+  }, 1000);
+}
+
+function stopDurationClock(isoEnd) {
+  clearInterval(durationTimer);
+  if (startTime && isoEnd) {
+    const secs = Math.floor((new Date(isoEnd) - startTime) / 1000);
+    document.getElementById('mission-duration').textContent =
+      `${Math.floor(secs/60)}m ${secs%60}s`;
+  }
+}
+
+// ── SSE ───────────────────────────────────────────────────────────────────────
+
+function connectSSE() {
+  const es = new EventSource(`/missions/${encodeURIComponent(MISSION_ID)}/stream`);
+
+  es.addEventListener('snapshot', e => {
+    const d = JSON.parse(e.data);
+    setMissionStatus(d.status, d.mission_name, d.workflow);
+    setPercent(d.percent);
+    initSteps(d.steps);
+    if (d.date_created) startDurationClock(d.date_created);
+  });
+
+  es.addEventListener('step_start', e => {
+    const d = JSON.parse(e.data);
+    const step = stepData[d.step_id];
+    if (step) { step.status = 'running'; updateStepUI(stepCards[d.step_id], step); }
+    expandStep(stepCards[d.step_id]);
+    setPercent(d.percent);
+  });
+
+  es.addEventListener('log', e => {
+    const d = JSON.parse(e.data);
+    appendLog(d.step_id, d.message);
+  });
+
+  es.addEventListener('step_end', e => {
+    const d = JSON.parse(e.data);
+    const step = stepData[d.step_id];
+    if (step) {
+      step.status = d.error ? 'failed' : 'completed';
+      step.error  = d.error;
+      updateStepUI(stepCards[d.step_id], step);
+    }
+    setPercent(d.percent);
+  });
+
+  es.addEventListener('mission_end', e => {
+    const d = JSON.parse(e.data);
+    setMissionStatus(d.status || 'completed');
+    setPercent(d.percent ?? 100);
+    stopDurationClock(new Date().toISOString());
+    es.close();
+    // Met à jour le badge sur la page liste (si elle est ouverte dans un autre onglet)
+  });
+
+  es.addEventListener('not_found', () => {
+    es.close();
+    loadFromFile();
+  });
+
+  es.onerror = () => {
+    es.close();
+    loadFromFile();
+  };
+}
+
+async function loadFromFile() {
+  try {
+    const r = await fetch(`/missions/${encodeURIComponent(MISSION_ID)}/data`);
+    if (!r.ok) { document.getElementById('mission-name').textContent = 'Mission introuvable'; return; }
+    const d = await r.json();
+    setMissionStatus(d.status, d.mission_name, d.workflow);
+    setPercent(d.percent ?? 100);
+    initSteps(d.steps || []);
+    if (d.date_created) startDurationClock(d.date_created);
+    if (d.date_completed) stopDurationClock(d.date_completed);
+  } catch(e) {
+    document.getElementById('mission-name').textContent = 'Erreur de chargement';
+  }
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+connectSSE();
+</script>
+
+{% endblock %}

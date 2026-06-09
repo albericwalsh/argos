@@ -2,136 +2,1199 @@
 {% block content %}
 <!-- ══════════════ PAGE : WORKFLOW BUILDER ══════════════ -->
 
-  <div class="page-header">
-    <div class="workflow-meta">
-      <input class="wf-name-input" type="text" placeholder="Nom du workflow…" value="recon-full" />
-      <span class="badge badge-pending">Brouillon</span>
+<style>
+/* ── Layout ── */
+.workflow-builder {
+  display: grid;
+  grid-template-columns: 220px 1fr 300px;
+  gap: 0;
+  height: calc(100vh - 120px);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* ── Page header ── */
+.wf-name-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 0;
+  width: 220px;
+  outline: none;
+  transition: border-color .15s;
+}
+.wf-name-input:focus { border-color: var(--accent); }
+
+/* ── Palette ── */
+.builder-palette {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.builder-section-header {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.palette-search {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.palette-search input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 8px;
+  outline: none;
+}
+.palette-search input:focus { border-color: var(--accent); }
+.palette-modules {
+  overflow-y: auto;
+  flex: 1;
+  padding: 6px 0;
+}
+.palette-module {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: grab;
+  transition: background .1s;
+  user-select: none;
+}
+.palette-module:hover { background: rgba(255,255,255,.03); }
+.palette-module:active { cursor: grabbing; }
+.pm-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.pm-info { flex: 1; min-width: 0; }
+.pm-name { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm-type { font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-top: 1px; }
+.pm-drag-handle { color: var(--muted); font-size: 14px; cursor: grab; }
+
+/* ── Canvas ── */
+.builder-canvas {
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+.canvas-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.canvas-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* Drop zone highlight */
+.canvas-area.drag-over { background: rgba(0,229,160,.03); }
+
+/* ── Flow nodes ── */
+.wf-start-node, .wf-end-node {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  padding: 6px 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--surface);
+  user-select: none;
+  flex-shrink: 0;
+}
+.wf-connector {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.wf-add-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+  flex-shrink: 0;
+}
+.wf-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Step card ── */
+.wf-step {
+  width: 340px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color .15s;
+  flex-shrink: 0;
+  position: relative;
+}
+.wf-step:hover { border-color: var(--border-hover, #3a3a3e); }
+.wf-step.selected { border-color: var(--accent); }
+.wf-step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.wf-step-id {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.wf-step-module {
+  font-size: 12px;
+  font-weight: 600;
+  flex: 1;
+}
+.wf-step-delete {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity .1s, color .1s;
+}
+.wf-step:hover .wf-step-delete { opacity: 1; }
+.wf-step-delete:hover { color: #ff4d4d; }
+.wf-step-args {
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wf-step-arg {
+  display: flex;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.wf-step-arg-key { color: var(--muted); min-width: 80px; flex-shrink: 0; }
+.wf-step-arg-val { color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.canvas-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+  pointer-events: none;
+  padding: 40px;
+}
+.canvas-empty-icon { font-size: 32px; opacity: .2; margin-bottom: 4px; }
+
+/* ── Inspector ── */
+.builder-inspector {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.inspector-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.inspector-tab {
+  flex: 1;
+  padding: 9px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .12s, border-color .12s;
+  user-select: none;
+}
+.inspector-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.inspector-body { flex: 1; overflow-y: auto; padding: 14px; }
+
+.inspector-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+  height: 100%;
+  padding: 24px;
+}
+.inspector-empty-icon { font-size: 24px; opacity: .3; }
+
+/* Inspector form */
+.insp-group { margin-bottom: 14px; }
+.insp-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.insp-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 8px;
+  outline: none;
+  transition: border-color .12s;
+}
+.insp-input:focus { border-color: var(--accent); }
+.insp-select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 8px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6b78'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.insp-select:focus { border-color: var(--accent); }
+
+/* arg rows */
+.arg-val-row {
+  margin-bottom: 8px;
+}
+.arg-val-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.arg-val-key {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.arg-val-type {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 0 4px;
+}
+.arg-val-desc {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+/* inputs section */
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 4px;
+  margin-bottom: 4px;
+  align-items: center;
+}
+
+/* Resource picker */
+.res-select-wrap {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.res-select-wrap .insp-select { flex: 1; }
+.res-badge {
+  display: inline-block;
+  font-family: var(--font-mono); font-size: 9px;
+  background: rgba(0,229,160,.1); color: var(--accent);
+  border: 1px solid rgba(0,229,160,.25); border-radius: 3px;
+  padding: 1px 5px; white-space: nowrap;
+}
+
+/* JSON preview */
+.json-preview {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px;
+  white-space: pre;
+  overflow-x: auto;
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+.json-k { color: var(--accent); }
+.json-s { color: #a78bfa; }
+.json-n { color: #f5a623; }
+.json-b { color: #4dc8ff; }
+
+/* Workflow global form */
+.wf-meta-form { padding: 0 0 14px; }
+.insp-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 0;
+}
+.dep-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 6px;
+  margin: 2px;
+}
+.dep-badge-x { cursor: pointer; color: var(--muted); }
+.dep-badge-x:hover { color: #ff4d4d; }
+</style>
+
+<!-- Page header -->
+<div class="page-header">
+  <div class="workflow-meta" style="display:flex;align-items:center;gap:12px">
+    <input class="wf-name-input" type="text" id="wf-name" placeholder="Nom du workflow…" />
+    <span class="badge badge-pending" id="wf-status-badge">Brouillon</span>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost" onclick="importJSON()">Importer JSON</button>
+    <button class="btn btn-ghost" onclick="switchTab('json')">Prévisualiser JSON</button>
+    <button class="btn btn-primary" onclick="saveWorkflow()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13 7 21"/>
+        <polyline points="7 3 7 8 15 8"/>
+      </svg>
+      Sauvegarder
+    </button>
+  </div>
+</div>
+
+<div class="workflow-builder">
+
+  <!-- ── Palette ── -->
+  <div class="builder-palette">
+    <div class="builder-section-header">Modules disponibles</div>
+    <div class="palette-search">
+      <input type="text" id="palette-search" placeholder="Rechercher…" oninput="filterPalette(this.value)">
     </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-ghost">Importer JSON</button>
-      <button class="btn btn-ghost">Prévisualiser</button>
-      <button class="btn btn-primary">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-          <polyline points="17 21 17 13 7 13 7 21" />
-          <polyline points="7 3 7 8 15 8" />
-        </svg>
-        Sauvegarder
-      </button>
+    <div class="palette-modules" id="palette-modules">
+      {% for module in MODULES %}
+      {% set h = module.name | length * 37 % 360 %}
+      <div class="palette-module"
+           draggable="true"
+           data-module-id="{{ module.id }}"
+           data-module-name="{{ module.name }}"
+           data-module-cat="{{ module.category }}"
+           data-module-desc="{{ module.description }}"
+           ondragstart="onDragStart(event, '{{ module.id }}', '{{ module.name }}', '{{ module.category }}')"
+           onclick="addStepFromModule('{{ module.id }}', '{{ module.name }}', '{{ module.category }}')">
+        <div class="pm-icon" style="{{ module_style(module.name) }}">{{ module.name[:2].upper() }}</div>
+        <div class="pm-info">
+          <div class="pm-name">{{ module.name }}</div>
+          <div class="pm-type">{{ module.category }}</div>
+        </div>
+        <div class="pm-drag-handle">⠿</div>
+      </div>
+      {% else %}
+      <div style="padding:24px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:10px">
+        Aucun module installé
+      </div>
+      {% endfor %}
     </div>
   </div>
 
-  <div class="workflow-builder">
-
-    <!-- Palette modules -->
-    <div class="builder-palette">
-      <div class="builder-section-header">Modules disponibles</div>
-      <div class="palette-search">
-        <input type="text" placeholder="Rechercher un module…">
-      </div>
-      <div class="palette-modules">
-        <div class="palette-module" draggable="true">
-          <div class="pm-icon" style="background:rgba(0,229,160,.1);color:var(--accent)">NS</div>
-          <div class="pm-info">
-            <div class="pm-name">nslookup</div>
-            <div class="pm-type">recon</div>
-          </div>
-          <div class="pm-drag-handle">⠿</div>
-        </div>
-        <div class="palette-module" draggable="true">
-          <div class="pm-icon" style="background:rgba(0,153,255,.1);color:var(--accent2)">NM</div>
-          <div class="pm-info">
-            <div class="pm-name">nmap_scan</div>
-            <div class="pm-type">scan</div>
-          </div>
-          <div class="pm-drag-handle">⠿</div>
-        </div>
-        <div class="palette-module" draggable="true">
-          <div class="pm-icon" style="background:rgba(255,167,58,.1);color:var(--warn)">WH</div>
-          <div class="pm-info">
-            <div class="pm-name">whois</div>
-            <div class="pm-type">recon</div>
-          </div>
-          <div class="pm-drag-handle">⠿</div>
-        </div>
-        <div class="palette-module" draggable="true">
-          <div class="pm-icon" style="background:rgba(167,139,250,.1);color:#a78bfa">SB</div>
-          <div class="pm-info">
-            <div class="pm-name">subfinder</div>
-            <div class="pm-type">enum</div>
-          </div>
-          <div class="pm-drag-handle">⠿</div>
-        </div>
-        <div class="palette-module" draggable="true">
-          <div class="pm-icon" style="background:rgba(0,229,160,.1);color:var(--accent)">HT</div>
-          <div class="pm-info">
-            <div class="pm-name">httpx_probe</div>
-            <div class="pm-type">probe</div>
-          </div>
-          <div class="pm-drag-handle">⠿</div>
-        </div>
-        <div class="palette-module" draggable="true">
-          <div class="pm-icon" style="background:rgba(0,153,255,.1);color:var(--accent2)">RP</div>
-          <div class="pm-info">
-            <div class="pm-name">report_gen</div>
-            <div class="pm-type">output</div>
-          </div>
-          <div class="pm-drag-handle">⠿</div>
-        </div>
-        <div class="palette-module" draggable="true">
-          <div class="pm-icon" style="background:rgba(255,167,58,.1);color:var(--warn)">SS</div>
-          <div class="pm-info">
-            <div class="pm-name">screenshot</div>
-            <div class="pm-type">enum</div>
-          </div>
-          <div class="pm-drag-handle">⠿</div>
-        </div>
+  <!-- ── Canvas ── -->
+  <div class="builder-canvas">
+    <div class="canvas-toolbar">
+      <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="undo()">↩ Annuler</button>
+      <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="redo()">↪ Refaire</button>
+      <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
+      <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="addStepPrompt()">+ Étape</button>
+      <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;color:#ff4d4d" onclick="clearCanvas()" id="btn-clear" style="display:none">✕ Vider</button>
+      <div style="margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--muted)" id="canvas-hint">
+        Glisser-déposer ou cliquer sur un module
       </div>
     </div>
-
-    <!-- Canvas -->
-    <div class="builder-canvas">
-      <div class="canvas-toolbar">
-        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px">↩ Annuler</button>
-        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px">↪ Refaire</button>
-        <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
-        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px">+ Étape</button>
-        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px">⬡ Condition</button>
-        <div style="margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--muted)">
-          Glisser-déposer les modules depuis la palette
-        </div>
-      </div>
-      <div class="canvas-area" id="canvas-area">
-        <!-- Placeholder when empty -->
-        <div class="canvas-empty" id="canvas-empty">
-          <div class="canvas-empty-icon">⬡</div>
-          <div class="canvas-empty-text">Glissez un module ici<br>pour commencer votre workflow</div>
-          <div class="canvas-empty-hint">ou cliquez sur + Étape</div>
-        </div>
-
-        <!-- Pre-populated example flow (visible by default for UX preview) -->
-        <div id="canvas-flow"
-          style="display:flex;flex-direction:column;align-items:center;gap:0;position:relative;z-index:1">
-          <div class="wf-start-node">▶ START</div>
-          <div class="wf-connector"></div>
-          <div class="wf-add-step" onclick="addStep()">+ Ajouter une étape</div>
-          <div class="wf-connector"></div>
-          <div class="wf-end-node">■ END</div>
-        </div>
-      </div>
+    <div class="canvas-area" id="canvas-area"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="onDrop(event)">
+      <!-- Rendered by JS -->
     </div>
-
-    <!-- Inspector -->
-    <div class="builder-inspector">
-      <div class="builder-section-header">Inspecteur</div>
-      <div class="inspector-empty">
-        <div class="inspector-empty-icon">🔍</div>
-        <div class="inspector-empty-text">
-          Sélectionnez une étape<br>pour configurer ses paramètres
-        </div>
-      </div>
-    </div>
-
   </div>
+
+  <!-- ── Inspector ── -->
+  <div class="builder-inspector">
+    <div class="inspector-tabs">
+      <div class="inspector-tab active" id="tab-step" onclick="switchTab('step')">Étape</div>
+      <div class="inspector-tab" id="tab-workflow" onclick="switchTab('workflow')">Workflow</div>
+      <div class="inspector-tab" id="tab-json" onclick="switchTab('json')">JSON</div>
+    </div>
+    <div class="inspector-body" id="inspector-body">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+
+</div>
+
+<!-- Hidden import textarea -->
+<textarea id="import-textarea" style="display:none"></textarea>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+const MODULES = {{ modules_json | safe }};
+
+let state = {
+  id: '',
+  name: '',
+  description: '',
+  inputs: {},        // { key: defaultValue }
+  steps: [],         // [{ id, module, args: {key: val}, depends_on: [] }]
+};
+
+let selectedStepIdx = null;
+let activeTab = 'step';
+let history = [];
+let historyIdx = -1;
+let dragModuleId = null;
+let dragModuleName = null;
+let dragModuleCategory = null;
+
+// ════════════════════════════════════════════════════════════════
+// HISTORY
+// ════════════════════════════════════════════════════════════════
+function pushHistory() {
+  history = history.slice(0, historyIdx + 1);
+  history.push(JSON.stringify(state));
+  historyIdx++;
+  if (history.length > 50) { history.shift(); historyIdx--; }
+}
+function undo() {
+  if (historyIdx <= 0) return;
+  historyIdx--;
+  state = JSON.parse(history[historyIdx]);
+  selectedStepIdx = null;
+  render();
+}
+function redo() {
+  if (historyIdx >= history.length - 1) return;
+  historyIdx++;
+  state = JSON.parse(history[historyIdx]);
+  render();
+}
+
+// ════════════════════════════════════════════════════════════════
+// RENDER CANVAS
+// ════════════════════════════════════════════════════════════════
+function render() {
+  renderCanvas();
+  renderInspector();
+  syncNameInput();
+}
+
+function syncNameInput() {
+  const inp = document.getElementById('wf-name');
+  if (inp && inp.value !== state.name) inp.value = state.name;
+}
+
+function renderCanvas() {
+  const area = document.getElementById('canvas-area');
+  area.innerHTML = '';
+  area.classList.remove('drag-over');
+
+  const flow = document.createElement('div');
+  flow.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:0;width:100%';
+
+  // START
+  const start = el('div', 'wf-start-node', '▶ START');
+  flow.appendChild(start);
+
+  if (state.steps.length === 0) {
+    flow.appendChild(connector());
+    const empty = document.createElement('div');
+    empty.className = 'canvas-empty';
+    empty.innerHTML = `<div class="canvas-empty-icon">⬡</div>
+      <div>Glissez un module ici<br>ou cliquez sur <strong>+ Étape</strong></div>`;
+    flow.appendChild(empty);
+  } else {
+    state.steps.forEach((step, idx) => {
+      flow.appendChild(connector());
+      flow.appendChild(addBtn(idx));
+      flow.appendChild(connector());
+      flow.appendChild(stepCard(step, idx));
+    });
+    flow.appendChild(connector());
+    flow.appendChild(addBtn(state.steps.length));
+  }
+
+  flow.appendChild(connector());
+  flow.appendChild(el('div', 'wf-end-node', '■ END'));
+
+  area.appendChild(flow);
+}
+
+function connector() {
+  return el('div', 'wf-connector');
+}
+
+function addBtn(insertIdx) {
+  const b = document.createElement('button');
+  b.className = 'wf-add-btn';
+  b.textContent = '+';
+  b.title = 'Ajouter une étape ici';
+  b.onclick = () => addStepAt(insertIdx);
+  return b;
+}
+
+function stepCard(step, idx) {
+  const card = document.createElement('div');
+  card.className = 'wf-step' + (idx === selectedStepIdx ? ' selected' : '');
+  card.onclick = () => selectStep(idx);
+
+  // module meta
+  const mod = MODULES.find(m => m.id === step.module);
+  const modName = mod ? mod.name : step.module;
+  const modStyle = mod ? moduleStyleJS(mod.name) : 'background:rgba(100,100,100,.1);color:#888';
+
+  card.innerHTML = `
+    <div class="wf-step-header">
+      <div class="pm-icon" style="width:24px;height:24px;font-size:8px;${modStyle}">${modName.slice(0,2).toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div class="wf-step-id">${step.id}</div>
+        <div class="wf-step-module">${modName}</div>
+      </div>
+      ${step.depends_on && step.depends_on.length ? `<span style="font-family:var(--font-mono);font-size:9px;color:var(--muted)">← ${step.depends_on.join(', ')}</span>` : ''}
+      <button class="wf-step-delete" onclick="event.stopPropagation();deleteStep(${idx})" title="Supprimer">✕</button>
+    </div>
+    <div class="wf-step-args">
+      ${Object.entries(step.args || {}).map(([k,v]) => `
+        <div class="wf-step-arg">
+          <span class="wf-step-arg-key">${k}</span>
+          <span class="wf-step-arg-val">${Array.isArray(v) ? JSON.stringify(v) : v}</span>
+        </div>`).join('')}
+      ${Object.keys(step.args||{}).length === 0 ? '<span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Aucun argument</span>' : ''}
+    </div>`;
+  return card;
+}
+
+function moduleStyleJS(name) {
+  // Mirror the Flask module_style logic
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0x7fffffff;
+  h = h % 360;
+  return `background:hsl(${h},55%,60%,0.12);color:hsl(${h},70%,65%)`;
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text) e.textContent = text;
+  return e;
+}
+
+// ════════════════════════════════════════════════════════════════
+// INSPECTOR
+// ════════════════════════════════════════════════════════════════
+function renderInspector() {
+  const body = document.getElementById('inspector-body');
+  if (activeTab === 'json') { renderJSONTab(body); return; }
+  if (activeTab === 'workflow') { renderWorkflowTab(body); return; }
+  // step tab
+  if (selectedStepIdx === null || selectedStepIdx >= state.steps.length) {
+    body.innerHTML = `<div class="inspector-empty">
+      <div class="inspector-empty-icon">🔍</div>
+      <div>Sélectionnez une étape<br>pour configurer ses paramètres</div>
+    </div>`;
+    return;
+  }
+  renderStepTab(body, state.steps[selectedStepIdx], selectedStepIdx);
+}
+
+function renderStepTab(body, step, idx) {
+  const allStepsBefore = state.steps.slice(0, idx).map(s => s.id);
+
+  body.innerHTML = `
+    <div class="insp-group">
+      <div class="insp-label">ID de l'étape</div>
+      <input class="insp-input" id="insp-step-id" value="${step.id}" oninput="updateStepId(this.value)">
+    </div>
+
+    <div class="insp-group">
+      <div class="insp-label">Module</div>
+      <select class="insp-select" id="insp-step-module" onchange="updateStepModule(this.value)">
+        ${MODULES.map(m => `<option value="${m.id}" ${m.id === step.module ? 'selected' : ''}>${m.name} (${m.category})</option>`).join('')}
+        ${!MODULES.find(m => m.id === step.module) ? `<option value="${step.module}" selected>${step.module}</option>` : ''}
+      </select>
+    </div>
+
+    <div class="insp-divider"></div>
+
+    <div class="insp-group">
+      <div class="insp-label">Arguments</div>
+      <div id="insp-args">
+        ${argRowsForStep(step)}
+      </div>
+    </div>
+
+    <div class="insp-divider"></div>
+
+    <div class="insp-group">
+      <div class="insp-label">Dépendances</div>
+      <div id="insp-deps" style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:6px">
+        ${(step.depends_on || []).map(d => `
+          <span class="dep-badge">${d} <span class="dep-badge-x" onclick="removeDep('${d}')">×</span></span>
+        `).join('')}
+      </div>
+      ${allStepsBefore.length ? `
+        <select class="insp-select" id="dep-add-select" onchange="addDep(this.value);this.value=''">
+          <option value="">+ Ajouter dépendance…</option>
+          ${allStepsBefore.filter(s => !(step.depends_on||[]).includes(s)).map(s => `<option value="${s}">${s}</option>`).join('')}
+        </select>` : `<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Aucune étape précédente</div>`}
+    </div>
+
+    <div class="insp-divider"></div>
+    <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.08em;text-transform:uppercase">Références disponibles</div>
+    <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.8">
+      ${Object.keys(state.inputs).map(k => `<div style="cursor:pointer" onclick="copyRef('$inputs.${k}')" title="Cliquer pour copier"><span style="color:var(--accent)">$inputs.${k}</span></div>`).join('')}
+      ${allStepsBefore.map(s => `<div style="cursor:pointer" onclick="copyRef('$${s}.output')" title="Cliquer pour copier"><span style="color:#a78bfa">$${s}.output</span></div>`).join('')}
+    </div>`;
+}
+
+function argRowsForStep(step) {
+  const mod = MODULES.find(m => m.id === step.module);
+  const params = (mod && mod.parameters) ? mod.parameters : [];
+
+  if (params.length === 0) {
+    // Fallback: show existing args as generic key/value (no schema)
+    const entries = Object.entries(step.args || {});
+    if (entries.length === 0) return '<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Aucun argument défini pour ce module.</div>';
+    return entries.map(([k, v], i) => `
+      <div class="arg-val-row">
+        <div class="arg-val-label"><span class="arg-val-key">${k}</span></div>
+        <input class="insp-input" style="font-size:11px" placeholder="valeur / $ref"
+               value="${Array.isArray(v) ? JSON.stringify(v) : (v ?? '')}"
+               oninput="updateArgValByKey('${k}', this.value)">
+      </div>`).join('');
+  }
+
+  return params.map(p => {
+    const currentVal = step.args.hasOwnProperty(p.name)
+      ? step.args[p.name]
+      : '';
+    const displayVal = Array.isArray(currentVal) ? JSON.stringify(currentVal) : (currentVal ?? '');
+    const placeholder = p.type === 'string' ? '$inputs.' + p.name : (p.type === 'array' ? '["val1","val2"]' : p.name);
+
+    // ── Type resource : select depuis /resources/list ──────────────
+    if (p.type === 'resource') {
+      const selectId = `res-select-${p.name}-${selectedStepIdx}`;
+      // Charge les ressources de façon async et peuple le select
+      setTimeout(() => {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        fetch('/resources/list').then(r => r.json()).then(list => {
+          const current = step.args[p.name] || '';
+          sel.innerHTML = '<option value="">— choisir une ressource —</option>' +
+            list.map(r => `<option value="${r.path.replace(/"/g,'&quot;')}"${r.path === current ? ' selected' : ''}>${r.name} (${r.size_str})</option>`).join('');
+          // Sélection courante non trouvée dans la liste → afficher quand même
+          if (current && !list.find(r => r.path === current)) {
+            sel.innerHTML += `<option value="${current.replace(/"/g,'&quot;')}" selected>${current}</option>`;
+          }
+        });
+      }, 0);
+      const shortName = currentVal ? currentVal.split(/[\\/]/).pop() : '';
+      return `
+        <div class="arg-val-row">
+          <div class="arg-val-label">
+            <span class="arg-val-key">${p.name}</span>
+            <span class="arg-val-type res-badge">resource</span>
+          </div>
+          ${p.description ? `<div class="arg-val-desc">${p.description}</div>` : ''}
+          <div class="res-select-wrap">
+            <select class="insp-select" id="${selectId}"
+                    onchange="updateArgValByKey('${p.name}', this.value)">
+              <option value="${(currentVal||'').replace(/"/g,'&quot;')}">${shortName || '— choisir —'}</option>
+            </select>
+            <a href="/resources" target="_blank" class="btn btn-ghost"
+               style="padding:5px 8px;font-size:11px;white-space:nowrap" title="Gérer les ressources">⊕</a>
+          </div>
+        </div>`;
+    }
+
+    return `
+      <div class="arg-val-row">
+        <div class="arg-val-label">
+          <span class="arg-val-key">${p.name}</span>
+          <span class="arg-val-type">${p.type || 'string'}</span>
+        </div>
+        ${p.description ? `<div class="arg-val-desc">${p.description}</div>` : ''}
+        <input class="insp-input" style="font-size:11px"
+               placeholder="${placeholder}"
+               value="${displayVal.replace(/"/g, '&quot;')}"
+               oninput="updateArgValByKey('${p.name}', this.value)">
+      </div>`;
+  }).join('');
+}
+
+function renderWorkflowTab(body) {
+  const inputRows = Object.entries(state.inputs).map(([k,v], i) => `
+    <div class="input-row" id="input-row-${i}">
+      <input class="insp-input" style="font-size:10px" placeholder="nom" value="${k}"
+             oninput="updateInputKey(${i}, this.value)">
+      <input class="insp-input" style="font-size:10px" placeholder="défaut" value="${v}"
+             oninput="updateInputVal(${i}, this.value)">
+      <button class="arg-row-del btn btn-ghost" style="padding:5px 10px;font-size:11px;color:#ff4d4d" onclick="deleteInput(${i})" title="Supprimer">✕</button>
+    </div>`).join('');
+
+  body.innerHTML = `
+    <div class="wf-meta-form">
+      <div class="insp-group">
+        <div class="insp-label">Identifiant</div>
+        <input class="insp-input" id="wf-id-input" placeholder="ex: recon_full" value="${state.id}"
+               oninput="state.id=this.value;syncStatusBadge()">
+      </div>
+      <div class="insp-group">
+        <div class="insp-label">Nom</div>
+        <input class="insp-input" placeholder="ex: Recon Full Scan" value="${state.name}"
+               oninput="state.name=this.value;syncNameInput();syncStatusBadge()">
+      </div>
+      <div class="insp-group">
+        <div class="insp-label">Description</div>
+        <input class="insp-input" placeholder="Description courte…" value="${state.description}"
+               oninput="state.description=this.value">
+      </div>
+    </div>
+
+    <div class="insp-divider"></div>
+
+    <div class="insp-group">
+      <div class="insp-label">Inputs du workflow</div>
+      <div id="insp-inputs">${inputRows}</div>
+      <button class="btn-add-arg btn btn-ghost" onclick="addInput()">+ Ajouter un input</button>
+    </div>`;
+}
+
+function renderJSONTab(body) {
+  const json = buildJSON();
+  body.innerHTML = `
+    <div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">Aperçu JSON</span>
+      <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px" onclick="copyJSON()">Copier</button>
+    </div>
+    <div class="json-preview">${syntaxHighlight(JSON.stringify(json, null, 2))}</div>`;
+}
+
+function syntaxHighlight(str) {
+  return str
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/(".*?")(\s*:)/g, '<span class="json-k">$1</span>$2')
+    .replace(/:\s*(".*?")/g, ': <span class="json-s">$1</span>')
+    .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-n">$1</span>')
+    .replace(/:\s*(true|false|null)/g, ': <span class="json-b">$1</span>');
+}
+
+// ════════════════════════════════════════════════════════════════
+// STEP MUTATIONS
+// ════════════════════════════════════════════════════════════════
+function nextStepId() {
+  const n = state.steps.length + 1;
+  return `step${n}`;
+}
+
+function addStepFromModule(moduleId, moduleName, moduleCategory) {
+  addStepAt(state.steps.length, moduleId);
+}
+
+function addStepAt(insertIdx, moduleId) {
+  pushHistory();
+  const mod = moduleId ? MODULES.find(m => m.id === moduleId) : null;
+  const _mod = moduleId ? MODULES.find(m => m.id === moduleId) : MODULES[0];
+  const _initArgs = {};
+  if (_mod && _mod.parameters) {
+    _mod.parameters.forEach(p => { _initArgs[p.name] = ''; });
+  }
+  const newStep = {
+    id: nextStepId(),
+    module: _mod ? _mod.id : 'module',
+    args: _initArgs,
+    depends_on: insertIdx > 0 ? [state.steps[insertIdx - 1]?.id].filter(Boolean) : [],
+  };
+  state.steps.splice(insertIdx, 0, newStep);
+  selectedStepIdx = insertIdx;
+  activeTab = 'step';
+  render();
+}
+
+function addStepPrompt() {
+  addStepAt(state.steps.length);
+}
+
+function deleteStep(idx) {
+  pushHistory();
+  const deletedId = state.steps[idx].id;
+  state.steps.splice(idx, 1);
+  // clean up references in depends_on
+  state.steps.forEach(s => {
+    s.depends_on = (s.depends_on || []).filter(d => d !== deletedId);
+  });
+  if (selectedStepIdx === idx) selectedStepIdx = null;
+  else if (selectedStepIdx > idx) selectedStepIdx--;
+  render();
+}
+
+function selectStep(idx) {
+  selectedStepIdx = idx;
+  activeTab = 'step';
+  document.getElementById('tab-step').classList.add('active');
+  document.getElementById('tab-workflow').classList.remove('active');
+  document.getElementById('tab-json').classList.remove('active');
+  render();
+}
+
+function clearCanvas() {
+  if (!confirm('Vider le canvas ?')) return;
+  pushHistory();
+  state.steps = [];
+  selectedStepIdx = null;
+  render();
+}
+
+// ── Step field updates ────────────────────────────────────────
+function updateStepId(val) {
+  const oldId = state.steps[selectedStepIdx].id;
+  state.steps[selectedStepIdx].id = val;
+  // update depends_on references
+  state.steps.forEach((s, i) => {
+    if (i !== selectedStepIdx)
+      s.depends_on = (s.depends_on || []).map(d => d === oldId ? val : d);
+  });
+  renderCanvas();
+  if (activeTab === 'json') renderInspector();
+}
+
+function updateStepModule(val) {
+  pushHistory();
+  const step = state.steps[selectedStepIdx];
+  step.module = val;
+  // Reinit args from new module's parameters
+  const mod = MODULES.find(m => m.id === val);
+  if (mod && mod.parameters && mod.parameters.length > 0) {
+    const newArgs = {};
+    mod.parameters.forEach(p => {
+      // Keep existing value if key already present
+      newArgs[p.name] = step.args.hasOwnProperty(p.name) ? step.args[p.name] : '';
+    });
+    step.args = newArgs;
+  }
+  renderCanvas();
+  renderInspector();
+}
+
+function updateArgValByKey(key, rawVal) {
+  const step = state.steps[selectedStepIdx];
+  // Auto-parse JSON arrays
+  let val = rawVal;
+  if (typeof rawVal === 'string' && rawVal.trim().startsWith('[')) {
+    try { val = JSON.parse(rawVal); } catch(e) { val = rawVal; }
+  }
+  step.args[key] = val;
+  renderCanvas();
+}
+
+function addDep(depId) {
+  if (!depId) return;
+  const step = state.steps[selectedStepIdx];
+  if (!step.depends_on) step.depends_on = [];
+  if (!step.depends_on.includes(depId)) step.depends_on.push(depId);
+  renderInspector();
+  renderCanvas();
+}
+
+function removeDep(depId) {
+  const step = state.steps[selectedStepIdx];
+  step.depends_on = (step.depends_on || []).filter(d => d !== depId);
+  renderInspector();
+  renderCanvas();
+}
+
+function copyRef(ref) {
+  navigator.clipboard.writeText(ref).then(() => showToast(`Copié : ${ref}`, 'success'));
+}
+
+// ── Workflow inputs ───────────────────────────────────────────
+function addInput() {
+  const keys = Object.keys(state.inputs);
+  state.inputs[`input${keys.length + 1}`] = '';
+  renderInspector();
+}
+
+function deleteInput(rowIdx) {
+  const keys = Object.keys(state.inputs);
+  delete state.inputs[keys[rowIdx]];
+  renderInspector();
+}
+
+function updateInputKey(rowIdx, newKey) {
+  const entries = Object.entries(state.inputs);
+  if (rowIdx >= entries.length) return;
+  const rebuilt = {};
+  entries.forEach(([k,v], i) => { rebuilt[i === rowIdx ? newKey : k] = v; });
+  state.inputs = rebuilt;
+}
+
+function updateInputVal(rowIdx, val) {
+  const keys = Object.keys(state.inputs);
+  if (rowIdx < keys.length) state.inputs[keys[rowIdx]] = val;
+}
+
+// ════════════════════════════════════════════════════════════════
+// DRAG & DROP
+// ════════════════════════════════════════════════════════════════
+function onDragStart(e, moduleId, moduleName, moduleCategory) {
+  dragModuleId = moduleId;
+  dragModuleName = moduleName;
+  dragModuleCategory = moduleCategory;
+  e.dataTransfer.effectAllowed = 'copy';
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('canvas-area').classList.remove('drag-over');
+  if (!dragModuleId) return;
+  addStepAt(state.steps.length, dragModuleId);
+  dragModuleId = null;
+}
+
+// ════════════════════════════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  activeTab = tab;
+  ['step','workflow','json'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+  renderInspector();
+}
+
+// ════════════════════════════════════════════════════════════════
+// PALETTE SEARCH
+// ════════════════════════════════════════════════════════════════
+function filterPalette(query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('.palette-module').forEach(el => {
+    const name = el.dataset.moduleName.toLowerCase();
+    const cat  = el.dataset.moduleCat.toLowerCase();
+    el.style.display = (!q || name.includes(q) || cat.includes(q)) ? '' : 'none';
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+// JSON BUILD & SAVE
+// ════════════════════════════════════════════════════════════════
+function buildJSON() {
+  return {
+    id:          state.id   || slugify(state.name) || 'workflow',
+    name:        state.name || 'Nouveau workflow',
+    description: state.description || '',
+    inputs:      state.inputs,
+    steps:       state.steps.map(s => {
+      const out = { id: s.id, module: s.module, args: s.args };
+      if (s.depends_on && s.depends_on.length) out.depends_on = s.depends_on;
+      return out;
+    }),
+  };
+}
+
+function slugify(str) {
+  return (str || '').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+}
+
+function syncStatusBadge() {
+  const badge = document.getElementById('wf-status-badge');
+  badge.textContent = state.id ? state.id : 'Brouillon';
+}
+
+async function saveWorkflow() {
+  const json = buildJSON();
+  if (!json.steps.length) { showToast('Ajoutez au moins une étape', 'error'); return; }
+  if (!json.id) { showToast("Définissez un identifiant dans l'onglet Workflow", 'error'); switchTab('workflow'); return; }
+
+  try {
+    const res = await fetch('/workflows/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(json),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Erreur serveur');
+    showToast(`Workflow "${json.name}" sauvegardé`, 'success');
+    document.getElementById('wf-status-badge').textContent = json.id;
+    document.getElementById('wf-status-badge').className = 'badge badge-success';
+  } catch(err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function importJSON() {
+  const raw = prompt('Collez votre JSON de workflow :');
+  if (!raw) return;
+  try {
+    const wf = JSON.parse(raw);
+    pushHistory();
+    state.id          = wf.id || '';
+    state.name        = wf.name || '';
+    state.description = wf.description || '';
+    state.inputs      = wf.inputs || {};
+    state.steps       = (wf.steps || []).map(s => ({
+      id:         s.id,
+      module:     s.module,
+      args:       s.args || {},
+      depends_on: s.depends_on || [],
+    }));
+    selectedStepIdx = null;
+    render();
+    showToast('Workflow importé', 'success');
+  } catch(e) {
+    showToast('JSON invalide : ' + e.message, 'error');
+  }
+}
+
+function copyJSON() {
+  navigator.clipboard.writeText(JSON.stringify(buildJSON(), null, 2))
+    .then(() => showToast('JSON copié', 'success'));
+}
+
+// ════════════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════════════
+let _toastT;
+function showToast(msg, type='success') {
+  let t = document.getElementById('__toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '__toast';
+    t.style.cssText = `position:fixed;bottom:24px;right:24px;
+      background:var(--surface);border:1px solid var(--border);border-radius:4px;
+      padding:10px 16px;font-family:var(--font-mono);font-size:11px;
+      display:flex;gap:8px;align-items:center;z-index:9999;
+      transform:translateY(120%);transition:transform .2s ease;`;
+    document.body.appendChild(t);
+  }
+  const dot = `<span style="width:6px;height:6px;border-radius:50%;background:${type==='success'?'var(--accent)':'#ff4d4d'};flex-shrink:0"></span>`;
+  t.innerHTML = dot + `<span>${msg}</span>`;
+  t.style.borderColor = type === 'success' ? 'var(--accent)' : '#ff4d4d';
+  t.style.transform = 'none';
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => t.style.transform = 'translateY(120%)', 3200);
+}
+
+// ════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════
+document.getElementById('wf-name').addEventListener('input', function() {
+  state.name = this.value;
+  syncStatusBadge();
+  if (activeTab === 'json') renderInspector();
+});
+
+// Initial push — ou chargement d'un workflow existant
+{% if load_wf %}
+(function() {
+  const wf = {{ load_wf | tojson }};
+  state.id          = wf.id || '';
+  state.name        = wf.name || '';
+  state.description = wf.description || '';
+  state.inputs      = wf.inputs || {};
+  state.steps       = (wf.steps || []).map(s => ({
+    id:         s.id,
+    module:     s.module,
+    args:       s.args || {},
+    depends_on: s.depends_on || [],
+  }));
+  document.getElementById('wf-name').value = state.name;
+})();
+{% endif %}
+pushHistory();
+render();
+</script>
 
 {% endblock %}

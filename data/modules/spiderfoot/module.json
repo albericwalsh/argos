@@ -7,16 +7,16 @@
         {
             "name": "target",
             "type": "string",
-            "description": "L'adresse IP, le nom de domaine ou l'identifiant de la cible à explorer."
+            "description": "L'adresse IP, le nom de domaine, l'email ou le sous-réseau cible."
         },
         {
-            "name": "options",
+            "name": "modules",
             "type": "string",
-            "description": "Les options de ligne de commande pour personnaliser l'exploration (par exemple, les modules à utiliser, les types d'informations à collecter, etc.)."
+            "description": "Modules SpiderFoot à activer, séparés par des virgules (ex: sfp_dnsresolve,sfp_ssl). Défaut: all."
         }
     ],
     "output": {
-        "type": "string",
-        "description": "Le résultat de l'exploration SpiderFoot, généralement au format texte ou JSON."
+        "type": "array",
+        "description": "Liste d'événements SpiderFoot (type, source, data, module, timestamp)."
     }
 }
