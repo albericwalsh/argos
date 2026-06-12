@@ -1,0 +1,17 @@
+{
+    "id": "whois",
+    "name": "Whois",
+    "category": "Information Gathering",
+    "description": "Whois est un outil de requête pour obtenir des informations sur les domaines et les adresses IP. Il permet de récupérer les détails du propriétaire, des administrateurs, des serveurs de noms et d'autres informations associées à un domaine ou une adresse IP.",
+    "parameters": [
+        {
+            "name": "target",
+            "type": "string",
+            "description": "Le domaine ou l'adresse IP à interroger via Whois."
+        }
+    ],
+    "output": {
+        "type": "string",
+        "description": "Le résultat de la requête Whois, généralement au format texte contenant les informations sur le domaine ou l'adresse IP."
+    }
+}

@@ -1,0 +1,126 @@
+{
+  "id": "#MSN-66641436",
+  "name": "Nikto — test vuln",
+  "workflow": "nikto",
+  "status": "completed",
+  "inputs": {
+    "port": "4000",
+    "target": "10.105.1.69"
+  },
+  "result": {
+    "inputs": {
+      "port": "4000",
+      "target": "10.105.1.69"
+    },
+    "step1": {
+      "output": [
+        {
+          "id": "NKT-getretrieved-x-power",
+          "method": "GET",
+          "path": "GET",
+          "description": "Retrieved x-powered-by header: Express",
+          "severity": "low",
+          "category": "header"
+        },
+        {
+          "id": "OSVDB-0270941",
+          "method": "GET",
+          "path": "GET",
+          "description": "Server leaks inodes via ETags, header found with file /, fields: 0xW/27e 0xNfH9vGsuYaJuww4smq+m1mrpKXU",
+          "severity": "low",
+          "category": "header"
+        },
+        {
+          "id": "NKT-getthe-anti-clickjac",
+          "method": "GET",
+          "path": "GET",
+          "description": "The anti-clickjacking X-Frame-Options header is not present.",
+          "severity": "low",
+          "category": "header"
+        },
+        {
+          "id": "NKT-getcookie-sessionid-",
+          "method": "GET",
+          "path": "GET",
+          "description": "Cookie sessionid created without the httponly flag",
+          "severity": "low",
+          "category": "header"
+        },
+        {
+          "id": "NKT-getuncommon-header-x",
+          "method": "GET",
+          "path": "GET",
+          "description": "Uncommon header 'x-content-type-options' found, with contents: nosniff",
+          "severity": "low",
+          "category": "header"
+        },
+        {
+          "id": "NKT-getuncommon-header-c",
+          "method": "GET",
+          "path": "GET",
+          "description": "Uncommon header 'content-security-policy' found, with contents: default-src 'none'",
+          "severity": "medium",
+          "category": "auth"
+        },
+        {
+          "id": "OSVDB-200",
+          "method": "GET",
+          "path": "GET",
+          "description": "File/dir '/admin/' in robots.txt returned a non-forbidden or redirect HTTP code (200)",
+          "severity": "medium",
+          "category": "config"
+        },
+        {
+          "id": "OSVDB-3",
+          "method": "GET",
+          "path": "GET",
+          "description": "\\robots.txt\\\" contains 3 entries which should be manually viewed.\"",
+          "severity": "low",
+          "category": "config"
+        },
+        {
+          "id": "NKT-optionsallowed-http-",
+          "method": "GET",
+          "path": "OPTIONS",
+          "description": "Allowed HTTP Methods: GET, HEAD",
+          "severity": "info",
+          "category": "other"
+        },
+        {
+          "id": "NKT-get-phpinfo-php-cont",
+          "method": "GET",
+          "path": "GET",
+          "description": "/phpinfo.php: Contains PHP configuration information",
+          "severity": "medium",
+          "category": "config"
+        },
+        {
+          "id": "NKT-get-server-status-th",
+          "method": "GET",
+          "path": "GET",
+          "description": "/server-status: This reveals Apache information. Comment out appropriate line in httpd.conf or restrict access to allowed hosts.",
+          "severity": "low",
+          "category": "disclosure"
+        },
+        {
+          "id": "NKT-get-admin-this-might",
+          "method": "GET",
+          "path": "GET",
+          "description": "/admin/: This might be interesting...",
+          "severity": "medium",
+          "category": "auth"
+        },
+        {
+          "id": "NKT-get-admin-this-might",
+          "method": "GET",
+          "path": "GET",
+          "description": "/Admin/: This might be interesting...",
+          "severity": "medium",
+          "category": "auth"
+        }
+      ]
+    }
+  },
+  "date_created": "2026-06-12T09:45:42.150638",
+  "date_completed": "2026-06-12T09:45:59.364874"
+}

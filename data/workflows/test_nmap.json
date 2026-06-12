@@ -11,10 +11,7 @@
       "module": "nmap",
       "args": {
         "options": [
-          "-sV",
-          "--version-intensity",
-          "9",
-          "CIBLE"
+          "-sP"
         ],
         "target": "$inputs.target"
       }

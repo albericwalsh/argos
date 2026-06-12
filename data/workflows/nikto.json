@@ -1,0 +1,28 @@
+{
+  "id": "nikto",
+  "name": "Nikto",
+  "description": "",
+  "inputs": {
+    "port": "3000",
+    "target": "10.105.1.69"
+  },
+  "steps": [
+    {
+      "id": "step2",
+      "module": "nmap",
+      "args": {
+        "target": "$inputs.target",
+        "options": "-sV"
+      }
+    },
+    {
+      "id": "step1",
+      "module": "nikto",
+      "args": {
+        "options": "",
+        "port": "$step2.output",
+        "target": "$inputs.target"
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "#MSN-82866240",
+  "name": "Test namp — ",
+  "workflow": "test_nmap",
+  "status": "completed",
+  "inputs": {
+    "target": "10.100.10.0/24"
+  },
+  "result": {
+    "inputs": {
+      "target": "10.100.10.0/24"
+    },
+    "step1": {
+      "output": []
+    }
+  },
+  "date_created": "2026-06-09T16:04:12.199451",
+  "date_completed": "2026-06-09T16:04:25.880736"
+}

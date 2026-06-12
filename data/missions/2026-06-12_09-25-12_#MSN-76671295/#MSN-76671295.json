@@ -1,0 +1,21 @@
+{
+  "id": "#MSN-76671295",
+  "name": "Nikto — ",
+  "workflow": "nikto",
+  "status": "completed",
+  "inputs": {
+    "target": "https://cesar.emineo-informatique.fr/"
+  },
+  "result": {
+    "inputs": {
+      "target": "https://cesar.emineo-informatique.fr/"
+    },
+    "step1": {
+      "output": {
+        "data": {}
+      }
+    }
+  },
+  "date_created": "2026-06-12T09:25:12.794425",
+  "date_completed": "2026-06-12T09:25:13.234039"
+}

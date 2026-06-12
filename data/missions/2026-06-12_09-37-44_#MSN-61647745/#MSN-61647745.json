@@ -1,0 +1,21 @@
+{
+  "id": "#MSN-61647745",
+  "name": "Nikto — test",
+  "workflow": "nikto",
+  "status": "completed",
+  "inputs": {
+    "port": "10.105.1.69",
+    "target": "3000"
+  },
+  "result": {
+    "inputs": {
+      "port": "10.105.1.69",
+      "target": "3000"
+    },
+    "step1": {
+      "output": []
+    }
+  },
+  "date_created": "2026-06-12T09:37:44.769847",
+  "date_completed": "2026-06-12T09:37:45.498275"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "#MSN-13647164",
+  "name": "Nikto — ",
+  "workflow": "nikto",
+  "status": "completed",
+  "inputs": {
+    "target": "youtube.com"
+  },
+  "result": {
+    "inputs": {
+      "target": "youtube.com"
+    },
+    "step1": {
+      "output": {
+        "data": {}
+      }
+    }
+  },
+  "date_created": "2026-06-12T09:18:39.291725",
+  "date_completed": "2026-06-12T09:18:40.649916"
+}

@@ -1,0 +1,70 @@
+{
+  "id": "#MSN-48239713",
+  "name": "Nikto — ",
+  "workflow": "nikto",
+  "status": "completed",
+  "inputs": {
+    "port": "10.105.1.69",
+    "target": "3000"
+  },
+  "result": {
+    "inputs": {
+      "port": "10.105.1.69",
+      "target": "3000"
+    },
+    "step1": {
+      "output": [
+        {
+          "id": "NKT-getretrieved-x-power",
+          "method": "GET",
+          "path": "GET",
+          "description": "Retrieved x-powered-by header: Express",
+          "severity": "low",
+          "category": "header"
+        },
+        {
+          "id": "OSVDB-02210196466",
+          "method": "GET",
+          "path": "GET",
+          "description": "Server leaks inodes via ETags, header found with file /, fields: 0xW/221e 0x19eb6feb466",
+          "severity": "low",
+          "category": "header"
+        },
+        {
+          "id": "NKT-getthe-anti-clickjac",
+          "method": "GET",
+          "path": "GET",
+          "description": "The anti-clickjacking X-Frame-Options header is not present.",
+          "severity": "low",
+          "category": "header"
+        },
+        {
+          "id": "NKT-getuncommon-header-x",
+          "method": "GET",
+          "path": "GET",
+          "description": "Uncommon header 'x-content-type-options' found, with contents: nosniff",
+          "severity": "low",
+          "category": "header"
+        },
+        {
+          "id": "NKT-getuncommon-header-c",
+          "method": "GET",
+          "path": "GET",
+          "description": "Uncommon header 'content-security-policy' found, with contents: default-src 'none'",
+          "severity": "medium",
+          "category": "auth"
+        },
+        {
+          "id": "NKT-optionsallowed-http-",
+          "method": "GET",
+          "path": "OPTIONS",
+          "description": "Allowed HTTP Methods: GET, HEAD",
+          "severity": "info",
+          "category": "other"
+        }
+      ]
+    }
+  },
+  "date_created": "2026-06-12T09:39:16.943982",
+  "date_completed": "2026-06-12T09:39:30.991002"
+}

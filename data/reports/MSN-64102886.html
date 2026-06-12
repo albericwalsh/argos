@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Argos — #MSN-64102886</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+  :root {
+    --bg: #0d0d0f; --surface: #141416; --surface2: #1c1c20;
+    --border: #2a2a2e; --border-hover: #3a3a3e;
+    --accent: #00e5a0; --text: #e8e8ec; --muted: #6b6b78;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --font-sans: 'IBM Plex Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--font-sans);
+    font-size: 13px; line-height: 1.6; padding: 40px;
+  }
+
+  /* ── Report header ── */
+  .report-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px; margin-bottom: 36px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .report-brand {
+    font-family: var(--font-mono); font-size: 11px; color: var(--accent);
+    letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .report-title { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .report-sub { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+  .report-meta {
+    text-align: right; font-family: var(--font-mono); font-size: 11px;
+    color: var(--muted); line-height: 1.9;
+  }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 3px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  .badge-completed { background: rgba(0,229,160,.12); color: var(--accent); border: 1px solid rgba(0,229,160,.3); }
+  .badge-failed    { background: rgba(255,77,77,.12);  color: #ff4d4d;       border: 1px solid rgba(255,77,77,.3); }
+  .badge-running   { background: rgba(245,166,35,.12); color: #f5a623;       border: 1px solid rgba(245,166,35,.3); }
+
+  /* ── Inputs section ── */
+  .section { margin-bottom: 36px; }
+  .section-title {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent);
+    padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 16px;
+  }
+  .meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1px; background: var(--border); border: 1px solid var(--border);
+    border-radius: 4px; overflow: hidden;
+  }
+  .meta-cell { background: var(--surface); padding: 12px 16px; }
+  .meta-label {
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px;
+  }
+  .meta-value { font-family: var(--font-mono); font-size: 12px; color: var(--text); font-weight: 600; }
+
+  /* ── Step pipeline ── */
+  .pipeline {
+    display: flex; align-items: center; gap: 0;
+    margin-bottom: 28px; overflow-x: auto;
+  }
+  .pipeline-step {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    white-space: nowrap;
+  }
+  .pipeline-step:first-child { border-radius: 4px 0 0 4px; }
+  .pipeline-step:last-child  { border-radius: 0 4px 4px 0; }
+  .pipeline-step + .pipeline-step { border-left: none; }
+  .pipeline-step-id { color: var(--accent); font-weight: 600; }
+  .pipeline-arrow { color: var(--muted); font-size: 12px; }
+
+  /* ── Shared module section styles (each render.html extends these) ── */
+  .mod-section { margin-bottom: 32px; }
+  .mod-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-bottom: none; border-radius: 4px 4px 0 0;
+  }
+  .mod-header-left { display: flex; align-items: center; gap: 12px; }
+  .mod-icon { font-size: 20px; color: var(--accent); line-height: 1; opacity: .7; }
+  .mod-name  { font-size: 13px; font-weight: 600; }
+  .mod-meta  { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .mod-stats { display: flex; gap: 24px; }
+  .mod-stat  { text-align: right; }
+  .mod-stat-num { font-family: var(--font-mono); font-size: 18px; font-weight: 700; display: block; line-height: 1; }
+  .mod-stat-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+  .table-wrap { border: 1px solid var(--border); border-radius: 0 0 4px 4px; overflow: hidden; }
+  .mod-empty {
+    padding: 32px; text-align: center; color: var(--muted);
+    font-family: var(--font-mono); font-size: 11px;
+    border: 1px solid var(--border); border-top: none;
+    border-radius: 0 0 4px 4px;
+  }
+
+  /* ── Footer ── */
+  .report-footer {
+    margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="report-header">
+  <div>
+    <div class="report-brand">▸ Argos Security Platform — Scan Report</div>
+    <div class="report-title">Nikto — test new render</div>
+    <div class="report-sub">#MSN-64102886 &nbsp;·&nbsp; Workflow: nikto</div>
+  </div>
+  <div class="report-meta">
+    <span class="badge badge-completed">COMPLETED</span><br><br>
+    Généré le 2026-06-12 10:52:40<br>
+    Cible: <strong style="color:var(--text)">10.105.1.69</strong><br>
+    Durée: 1m 5s
+  </div>
+</div>
+
+<!-- ── Inputs ── -->
+<div class="section">
+  <div class="section-title">// Paramètres de la mission</div>
+  <div class="meta-grid"><div class="meta-cell"><div class="meta-label">port</div><div class="meta-value">3000</div></div><div class="meta-cell"><div class="meta-label">target</div><div class="meta-value">10.105.1.69</div></div></div>
+</div>
+
+<!-- ── Pipeline ── -->
+<div class="section">
+  <div class="section-title">// Pipeline d'exécution</div>
+  <div class="pipeline"><div class="pipeline-step"><span class="pipeline-step-id">step2</span></div><span class="pipeline-arrow">→</span><div class="pipeline-step"><span class="pipeline-step-id">step1</span></div></div>
+</div>
+
+<!-- ── Step fragments ── -->
+<div class="section"><div class="section-title">// Step 1 — step2 · Nmap</div>
+
+
+
+<div class="mod-section">
+  <div class="mod-header">
+    <div class="mod-header-left">
+      <span class="mod-icon">⬡</span>
+      <div>
+        <div class="mod-name">Nmap</div>
+        <div class="mod-meta">Network Scanning · step2</div>
+      </div>
+    </div>
+    <div class="mod-stats">
+      <div class="mod-stat">
+        <span class="mod-stat-num" style="color:var(--accent)">7</span>
+        <span class="mod-stat-lbl">ports ouverts</span>
+      </div>
+      
+      <div class="mod-stat">
+        <span class="mod-stat-num">3</span>
+        <span class="mod-stat-lbl">avec scripts NSE</span>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="table-wrap">
+    <table class="mod-table">
+      <thead>
+        <tr>
+          <th>Port</th>
+          <th>Proto</th>
+          <th>Service</th>
+          <th>Produit</th>
+          <th>Version</th>
+          <th>État</th>
+          <th>Scripts NSE</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        
+        <tr class=""
+            >
+          <td><span class="port-pill">135</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>msrpc</strong></td>
+          <td class="cell-muted">Microsoft Windows RPC</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="cell-muted">—</span>
+            
+          </td>
+        </tr>
+        
+        
+        
+        <tr class=""
+            >
+          <td><span class="port-pill">139</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>netbios-ssn</strong></td>
+          <td class="cell-muted">Microsoft Windows netbios-ssn</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="cell-muted">—</span>
+            
+          </td>
+        </tr>
+        
+        
+        
+        <tr class=""
+            >
+          <td><span class="port-pill">445</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>microsoft-ds</strong></td>
+          <td class="cell-muted">—</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="cell-muted">—</span>
+            
+          </td>
+        </tr>
+        
+        
+        
+        <tr class=""
+            >
+          <td><span class="port-pill">902</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>vmware-auth</strong></td>
+          <td class="cell-muted">VMware Authentication Daemon</td>
+          <td class="cell-mono">1.10</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="cell-muted">—</span>
+            
+          </td>
+        </tr>
+        
+        
+        
+        <tr class="has-scripts"
+            onclick="toggleScripts('step2-5')" style="cursor:pointer">
+          <td><span class="port-pill">3000</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>http</strong></td>
+          <td class="cell-muted">Node.js Express framework</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="nse-count">2 scripts</span>
+            <span class="nse-chevron" id="chev-step2-5">▾</span>
+            
+          </td>
+        </tr>
+        
+        <tr class="scripts-row" id="scripts-step2-5" style="display:none">
+          <td colspan="7">
+            <div class="scripts-grid">
+              
+              <div class="script-item">
+                <div class="script-name">http-title</div>
+                <pre class="script-out">SafePass</pre>
+              </div>
+              
+              <div class="script-item">
+                <div class="script-name">http-headers</div>
+                <pre class="script-out">X-Powered-By: Express
+  Accept-Ranges: bytes
+  Cache-Control: public, max-age=0
+  Last-Modified: Thu, 11 Jun 2026 14:03:26 GMT
+  ETag: W/"221e-19eb6feb466"
+  Content-Type: text/html; charset=UTF-8
+  Content-Length: 8734
+  Date: Fri, 12 Jun 2026 08:50:10 GMT
+  Connection: close
+  
+  (Request type: HEAD)</pre>
+              </div>
+              
+            </div>
+          </td>
+        </tr>
+        
+        
+        
+        <tr class="has-scripts"
+            onclick="toggleScripts('step2-6')" style="cursor:pointer">
+          <td><span class="port-pill">3306</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>mysql</strong></td>
+          <td class="cell-muted">MySQL</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="nse-count">1 script</span>
+            <span class="nse-chevron" id="chev-step2-6">▾</span>
+            
+          </td>
+        </tr>
+        
+        <tr class="scripts-row" id="scripts-step2-6" style="display:none">
+          <td colspan="7">
+            <div class="scripts-grid">
+              
+              <div class="script-item">
+                <div class="script-name">mysql-empty-password</div>
+                <pre class="script-out">Host '10.105.1.69' is not allowed to connect to this MySQL server</pre>
+              </div>
+              
+            </div>
+          </td>
+        </tr>
+        
+        
+        
+        <tr class="has-scripts"
+            onclick="toggleScripts('step2-7')" style="cursor:pointer">
+          <td><span class="port-pill">4000</span></td>
+          <td><span class="proto-tag">TCP</span></td>
+          <td><strong>http</strong></td>
+          <td class="cell-muted">Node.js</td>
+          <td class="cell-mono">—</td>
+          <td>
+            
+            <span class="state-badge state-open">open</span>
+          </td>
+          <td>
+            
+            <span class="nse-count">2 scripts</span>
+            <span class="nse-chevron" id="chev-step2-7">▾</span>
+            
+          </td>
+        </tr>
+        
+        <tr class="scripts-row" id="scripts-step2-7" style="display:none">
+          <td colspan="7">
+            <div class="scripts-grid">
+              
+              <div class="script-item">
+                <div class="script-name">http-headers</div>
+                <pre class="script-out">X-Powered-By: Express
+  Content-Type: text/html; charset=utf-8
+  Content-Length: 638
+  ETag: W/"27e-NfH9vGsuYaJuww4smq+m1mrpKXU"
+  Date: Fri, 12 Jun 2026 08:50:09 GMT
+  Connection: close
+  
+  (Request type: HEAD)</pre>
+              </div>
+              
+              <div class="script-item">
+                <div class="script-name">http-title</div>
+                <pre class="script-out">Vulnerable Test App</pre>
+              </div>
+              
+            </div>
+          </td>
+        </tr>
+        
+        
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+
+<style>
+  .mod-section { margin-bottom: 28px; }
+
+  .mod-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+  }
+  .mod-header-left { display: flex; align-items: center; gap: 12px; }
+  .mod-icon { font-size: 20px; color: var(--accent); line-height: 1; opacity: .7; }
+  .mod-name { font-size: 13px; font-weight: 600; }
+  .mod-meta { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+  .mod-stats { display: flex; gap: 24px; }
+  .mod-stat { text-align: right; }
+  .mod-stat-num { font-family: var(--font-mono); font-size: 18px; font-weight: 700; display: block; line-height: 1; }
+  .mod-stat-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+  .table-wrap { border: 1px solid var(--border); border-radius: 0 0 4px 4px; overflow: hidden; }
+  .mod-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .mod-table th {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 12px;
+    text-align: left; background: var(--surface2, #1c1c20);
+    border-bottom: 1px solid var(--border);
+  }
+  .mod-table td {
+    padding: 9px 12px; border-bottom: 1px solid rgba(42,42,46,.5); vertical-align: middle;
+  }
+  .mod-table tr:last-child td { border-bottom: none; }
+  .mod-table tr.has-scripts:hover td { background: rgba(0,229,160,.03); }
+
+  .port-pill { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--accent); }
+  .proto-tag {
+    font-family: var(--font-mono); font-size: 9px; color: var(--muted);
+    background: rgba(255,255,255,.05); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px 5px;
+  }
+  .state-badge {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 3px;
+  }
+  .state-open     { background: rgba(0,229,160,.1);  color: var(--accent); border: 1px solid rgba(0,229,160,.25); }
+  .state-closed   { background: rgba(255,77,77,.1);  color: #ff4d4d;       border: 1px solid rgba(255,77,77,.25); }
+  .state-filtered { background: rgba(245,166,35,.1); color: #f5a623;       border: 1px solid rgba(245,166,35,.25); }
+
+  .nse-count { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+  .nse-chevron { margin-left: 6px; font-size: 11px; color: var(--accent); transition: transform .15s; display: inline-block; }
+  .nse-chevron.open { transform: rotate(180deg); }
+
+  .scripts-row td { padding: 0; background: rgba(0,229,160,.03); }
+  .scripts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--border); }
+  .script-item { background: var(--bg, #0d0d0f); padding: 10px 14px; }
+  .script-name {
+    font-family: var(--font-mono); font-size: 9px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px;
+  }
+  .script-out {
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    white-space: pre-wrap; word-break: break-all; margin: 0; line-height: 1.5;
+  }
+  .cell-muted { color: var(--muted); font-size: 11px; }
+  .cell-mono  { font-family: var(--font-mono); font-size: 11px; }
+  .mod-empty {
+    padding: 32px; text-align: center; color: var(--muted);
+    font-family: var(--font-mono); font-size: 11px;
+    border: 1px solid var(--border); border-top: none; border-radius: 0 0 4px 4px;
+  }
+</style>
+
+<script>
+function toggleScripts(key) {
+  const row  = document.getElementById('scripts-' + key);
+  const chev = document.getElementById('chev-' + key);
+  if (!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  chev && chev.classList.toggle('open', !open);
+}
+</script></div><div class="section"><div class="section-title">// Step 2 — step1 · Nikto</div>
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+  
+  
+  
+    
+    
+  
+  
+
+
+
+
+
+
+
+
+
+<div class="mod-section">
+  <div class="mod-header">
+    <div class="mod-header-left">
+      <span class="mod-icon">⬡</span>
+      <div>
+        <div class="mod-name">Nikto</div>
+        <div class="mod-meta">
+          Web Scanning · step1
+          
+          
+            · ports: 3000, 4000
+          
+        </div>
+      </div>
+    </div>
+    <div class="mod-stats">
+      
+      
+      <div class="mod-stat">
+        <span class="mod-stat-num sev-medium">6</span>
+        <span class="mod-stat-lbl">medium</span>
+      </div>
+      
+      
+      <div class="mod-stat">
+        <span class="mod-stat-num sev-low">11</span>
+        <span class="mod-stat-lbl">low</span>
+      </div>
+      
+      <div class="mod-stat">
+        <span class="mod-stat-num" style="color:var(--muted)">2</span>
+        <span class="mod-stat-lbl">info</span>
+      </div>
+      <div class="mod-stat">
+        <span class="mod-stat-num" style="color:var(--accent)">19</span>
+        <span class="mod-stat-lbl">total</span>
+      </div>
+    </div>
+  </div>
+
+  
+
+  
+  
+  <div class="sev-bar-wrap">
+    
+    
+    <div class="sev-bar-seg sev-bar-medium" style="width:31.6%"></div>
+    
+    
+    <div class="sev-bar-seg sev-bar-low"    style="width:57.9%"></div>
+    
+    
+    <div class="sev-bar-seg sev-bar-info"   style="width:10.5%"></div>
+    
+  </div>
+
+  <div class="table-wrap">
+    <table class="mod-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Sévérité</th>
+          <th>Catégorie</th>
+          
+          
+          <th>Port</th>
+          
+          <th>Méthode</th>
+          <th>Chemin</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        
+        <tr class="row-sev-info">
+          <td><span class="finding-id">NKT-optionsallowed-http-</span></td>
+          <td><span class="sev-badge sev-info">INFO</span></td>
+          <td><span class="cat-tag cat-other">other</span></td>
+          
+          
+          <td><span class="cat-tag">3000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="OPTIONS">OPTIONS</td>
+          <td class="cell-desc">Allowed HTTP Methods: GET, HEAD</td>
+        </tr>
+        
+        
+        <tr class="row-sev-info">
+          <td><span class="finding-id">NKT-optionsallowed-http-</span></td>
+          <td><span class="sev-badge sev-info">INFO</span></td>
+          <td><span class="cat-tag cat-other">other</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="OPTIONS">OPTIONS</td>
+          <td class="cell-desc">Allowed HTTP Methods: GET, HEAD</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">NKT-getretrieved-x-power</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-header">header</span></td>
+          
+          
+          <td><span class="cat-tag">3000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">Retrieved x-powered-by header: Express</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">OSVDB-02210196466</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-header">header</span></td>
+          
+          
+          <td><span class="cat-tag">3000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">Server leaks inodes via ETags, header found with file /, fields: 0xW/221e 0x19eb6feb466</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">NKT-getthe-anti-clickjac</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-header">header</span></td>
+          
+          
+          <td><span class="cat-tag">3000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">The anti-clickjacking X-Frame-Options header is not present.</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">NKT-getuncommon-header-x</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-header">header</span></td>
+          
+          
+          <td><span class="cat-tag">3000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">Uncommon header 'x-content-type-options' found, with contents: nosniff</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">NKT-getretrieved-x-power</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-header">header</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">Retrieved x-powered-by header: Express</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">OSVDB-0270941</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-header">header</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">Server leaks inodes via ETags, header found with file /, fields: 0xW/27e 0xNfH9vGsuYaJuww4smq+m1mrpKXU</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">NKT-getthe-anti-clickjac</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-header">header</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">The anti-clickjacking X-Frame-Options header is not present.</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">NKT-getcookie-sessionid-</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-header">header</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">Cookie sessionid created without the httponly flag</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">NKT-getuncommon-header-x</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-header">header</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">Uncommon header 'x-content-type-options' found, with contents: nosniff</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">OSVDB-3</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-config">config</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">\robots.txt\" contains 3 entries which should be manually viewed."</td>
+        </tr>
+        
+        
+        <tr class="row-sev-low">
+          <td><span class="finding-id">NKT-get-server-status-th</span></td>
+          <td><span class="sev-badge sev-low">LOW</span></td>
+          <td><span class="cat-tag cat-disclosure">disclosure</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">/server-status: This reveals Apache information. Comment out appropriate line in httpd.conf or restrict access to allowed hosts.</td>
+        </tr>
+        
+        
+        <tr class="row-sev-medium">
+          <td><span class="finding-id">NKT-getuncommon-header-c</span></td>
+          <td><span class="sev-badge sev-medium">MEDIUM</span></td>
+          <td><span class="cat-tag cat-auth">auth</span></td>
+          
+          
+          <td><span class="cat-tag">3000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">Uncommon header 'content-security-policy' found, with contents: default-src 'none'</td>
+        </tr>
+        
+        
+        <tr class="row-sev-medium">
+          <td><span class="finding-id">NKT-getuncommon-header-c</span></td>
+          <td><span class="sev-badge sev-medium">MEDIUM</span></td>
+          <td><span class="cat-tag cat-auth">auth</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">Uncommon header 'content-security-policy' found, with contents: default-src 'none'</td>
+        </tr>
+        
+        
+        <tr class="row-sev-medium">
+          <td><span class="finding-id">OSVDB-200</span></td>
+          <td><span class="sev-badge sev-medium">MEDIUM</span></td>
+          <td><span class="cat-tag cat-config">config</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">File/dir '/admin/' in robots.txt returned a non-forbidden or redirect HTTP code (200)</td>
+        </tr>
+        
+        
+        <tr class="row-sev-medium">
+          <td><span class="finding-id">NKT-get-phpinfo-php-cont</span></td>
+          <td><span class="sev-badge sev-medium">MEDIUM</span></td>
+          <td><span class="cat-tag cat-config">config</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">/phpinfo.php: Contains PHP configuration information</td>
+        </tr>
+        
+        
+        <tr class="row-sev-medium">
+          <td><span class="finding-id">NKT-get-admin-this-might</span></td>
+          <td><span class="sev-badge sev-medium">MEDIUM</span></td>
+          <td><span class="cat-tag cat-auth">auth</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">/admin/: This might be interesting...</td>
+        </tr>
+        
+        
+        <tr class="row-sev-medium">
+          <td><span class="finding-id">NKT-get-admin-this-might</span></td>
+          <td><span class="sev-badge sev-medium">MEDIUM</span></td>
+          <td><span class="cat-tag cat-auth">auth</span></td>
+          
+          
+          <td><span class="cat-tag">4000</span></td>
+          
+          <td><span class="method-tag method-get">GET</span></td>
+          <td class="cell-mono cell-path" title="GET">GET</td>
+          <td class="cell-desc">/Admin/: This might be interesting...</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+
+  
+</div>
+
+<style>
+  .mod-section { margin-bottom: 28px; }
+
+  /* ── Header ─────────────────────────────────────────── */
+  .mod-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+  }
+  .mod-header-left { display: flex; align-items: center; gap: 12px; }
+  .mod-icon { font-size: 20px; color: var(--accent); line-height: 1; opacity: .7; }
+  .mod-name { font-size: 13px; font-weight: 600; }
+  .mod-meta { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+  .target-tag { color: var(--accent); }
+
+  .mod-stats { display: flex; gap: 20px; align-items: flex-end; }
+  .mod-stat  { text-align: right; }
+  .mod-stat-num { font-family: var(--font-mono); font-size: 18px; font-weight: 700; display: block; line-height: 1; }
+  .mod-stat-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+  /* ── Severity colours ───────────────────────────────── */
+  .sev-high   { color: #ff4d4d !important; }
+  .sev-medium { color: #f5a623 !important; }
+  .sev-low    { color: #4da6ff !important; }
+
+  /* ── Severity bar ───────────────────────────────────── */
+  .sev-bar-wrap {
+    display: flex; height: 3px; width: 100%;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .sev-bar-seg  { height: 100%; transition: width .3s; }
+  .sev-bar-high   { background: #ff4d4d; }
+  .sev-bar-medium { background: #f5a623; }
+  .sev-bar-low    { background: #4da6ff; }
+  .sev-bar-info   { background: #2a2a2e; }
+
+  /* ── Table ──────────────────────────────────────────── */
+  .table-wrap { border: 1px solid var(--border); border-top: none; border-radius: 0 0 4px 4px; overflow: hidden; }
+  .mod-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .mod-table th {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 12px;
+    text-align: left; background: var(--surface2, #1c1c20);
+    border-bottom: 1px solid var(--border);
+  }
+  .mod-table td {
+    padding: 8px 12px; border-bottom: 1px solid rgba(42,42,46,.5); vertical-align: top;
+  }
+  .mod-table tr:last-child td { border-bottom: none; }
+
+  /* Row background tint by severity */
+  .row-sev-high   td { background: rgba(255,77,77,.03); }
+  .row-sev-medium td { background: rgba(245,166,35,.03); }
+  .row-sev-low    td { background: rgba(77,166,255,.03); }
+  .row-sev-info   td { background: transparent; }
+  .mod-table tr:hover td { filter: brightness(1.08); }
+
+  /* ── Badges & tags ──────────────────────────────────── */
+  .finding-id {
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+  }
+  .sev-badge {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 3px;
+    white-space: nowrap;
+  }
+  .sev-badge.sev-high   { background: rgba(255,77,77,.12);  color: #ff4d4d;  border: 1px solid rgba(255,77,77,.3); }
+  .sev-badge.sev-medium { background: rgba(245,166,35,.12); color: #f5a623;  border: 1px solid rgba(245,166,35,.3); }
+  .sev-badge.sev-low    { background: rgba(77,166,255,.12); color: #4da6ff;  border: 1px solid rgba(77,166,255,.3); }
+  .sev-badge.sev-info   { background: rgba(107,107,120,.1); color: #6b6b78;  border: 1px solid rgba(107,107,120,.2); }
+
+  .cat-tag {
+    font-family: var(--font-mono); font-size: 9px; color: var(--muted);
+    background: rgba(255,255,255,.04); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px 5px; white-space: nowrap;
+  }
+
+  .method-tag {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+  }
+  .method-get    { color: var(--accent); background: rgba(0,229,160,.08); border: 1px solid rgba(0,229,160,.2); }
+  .method-post   { color: #f5a623;       background: rgba(245,166,35,.08); border: 1px solid rgba(245,166,35,.2); }
+  .method-head   { color: #4da6ff;       background: rgba(77,166,255,.08); border: 1px solid rgba(77,166,255,.2); }
+  .method-put,
+  .method-delete { color: #ff4d4d;       background: rgba(255,77,77,.08);  border: 1px solid rgba(255,77,77,.2); }
+  .method-options,
+  .method-trace  { color: var(--muted);  background: rgba(255,255,255,.04); border: 1px solid var(--border); }
+
+  .cell-mono  { font-family: var(--font-mono); font-size: 11px; }
+  .cell-path  { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .cell-desc  { font-size: 11px; line-height: 1.5; color: var(--text, #e8e8ec); max-width: 340px; }
+
+  .mod-empty {
+    padding: 32px; text-align: center; color: var(--muted);
+    font-family: var(--font-mono); font-size: 11px;
+    border: 1px solid var(--border); border-top: none; border-radius: 0 0 4px 4px;
+  }
+</style></div>
+
+<!-- ── Footer ── -->
+<div class="report-footer">
+  <span>Argos Security Platform</span>
+  <span>Rapport confidentiel — usage interne</span>
+  <span>Généré le 2026-06-12 10:52:40</span>
+</div>
+
+</body>
+</html>

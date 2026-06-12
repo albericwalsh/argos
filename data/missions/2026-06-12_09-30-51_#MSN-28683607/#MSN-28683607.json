@@ -1,0 +1,22 @@
+{
+  "id": "#MSN-28683607",
+  "name": "Nikto — ",
+  "workflow": "nikto",
+  "status": "failed",
+  "inputs": {
+    "target": "localhost",
+    "port": "3000"
+  },
+  "result": {
+    "inputs": {
+      "target": "localhost",
+      "port": "3000"
+    },
+    "step1": {
+      "output": null,
+      "error": "[nikto] Docker indisponible : Docker est installé mais le daemon n'est pas joignable (pipe Windows introuvable). Lance Docker Desktop et attends qu'il affiche 'Running', puis réessaie."
+    }
+  },
+  "date_created": "2026-06-12T09:30:51.707602",
+  "date_completed": "2026-06-12T09:30:51.721393"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "#MSN-66981013",
+  "name": "Nikto — ",
+  "workflow": "nikto",
+  "status": "failed",
+  "inputs": {
+    "target": "10.105.1.69",
+    "ports": ""
+  },
+  "result": {
+    "inputs": {
+      "target": "10.105.1.69",
+      "ports": ""
+    },
+    "step1": {
+      "output": null,
+      "error": "Command '['-host', '10.105.1.69', '-Format', 'csv', '-nointeractive']' in image 'frapsoft/nikto' returned non-zero exit status 2: b\"+ ERROR: Unable to open '' for write: \\n1 at /etc/nikto/plugins/nikto_report_csv.plugin line 43.\\n\""
+    }
+  },
+  "date_created": "2026-06-09T15:08:41.434264",
+  "date_completed": "2026-06-09T15:09:35.075090"
+}

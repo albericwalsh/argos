@@ -1,0 +1,22 @@
+{
+  "id": "#MSN-54882644",
+  "name": "Nikto — test nikto",
+  "workflow": "nikto",
+  "status": "failed",
+  "inputs": {
+    "target": "localhost",
+    "port": "3000"
+  },
+  "result": {
+    "inputs": {
+      "target": "localhost",
+      "port": "3000"
+    },
+    "step1": {
+      "output": null,
+      "error": "Error while fetching server API version: (2, 'CreateFile', 'Le fichier spécifié est introuvable.')"
+    }
+  },
+  "date_created": "2026-06-12T09:27:43.331066",
+  "date_completed": "2026-06-12T09:27:43.346772"
+}
