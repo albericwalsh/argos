@@ -1,0 +1,72 @@
+{
+    "id": "sqlmap",
+    "name": "SQLMap",
+    "category": "Exploitation",
+    "description": "Détecte et exploite automatiquement les injections SQL. Teste les URLs découvertes par ffuf et les services de base de données détectés par nmap.",
+    "parameters": [
+        {
+            "name": "target",
+            "type": "string",
+            "description": "URL ou IP cible (ex: http://10.x.x.x:8081/login.php ou 10.x.x.x:8081/login.php)."
+        },
+        {
+            "name": "data",
+            "type": "string",
+            "description": "Données POST à injecter (ex: username=test&password=test). Si renseigné, SQLMap teste chaque paramètre en POST. Prioritaire sur --forms."
+        },
+        {
+            "name": "method",
+            "type": "string",
+            "description": "Méthode HTTP forcée : GET ou POST. Déduit automatiquement si data est fourni."
+        },
+        {
+            "name": "urls",
+            "type": "list",
+            "description": "Liste de chemins issus de ffuf à tester pour injection SQL."
+        },
+        {
+            "name": "services",
+            "type": "list",
+            "description": "Liste de Service objects issus de nmap (détecte les ports DB ouverts : MySQL, PostgreSQL, MSSQL)."
+        },
+        {
+            "name": "level",
+            "type": "string",
+            "description": "Profondeur des tests SQLMap de 1 (rapide) à 5 (exhaustif). Défaut: 1."
+        },
+        {
+            "name": "risk",
+            "type": "string",
+            "description": "Agressivité des payloads de 1 (sûr) à 3 (destructif). Défaut: 1."
+        },
+        {
+            "name": "forms",
+            "type": "boolean",
+            "description": "Crawler la page pour trouver les formulaires HTML automatiquement (si data non fourni)."
+        },
+        {
+            "name": "dbs",
+            "type": "boolean",
+            "description": "Enumérer les bases de données si une injection est trouvée."
+        },
+        {
+            "name": "dump",
+            "type": "boolean",
+            "description": "Dumper le contenu des tables (utiliser avec précaution)."
+        },
+        {
+            "name": "cookies",
+            "type": "string",
+            "description": "Cookie de session pour tester des pages authentifiées (ex: PHPSESSID=abc123)."
+        },
+        {
+            "name": "headers",
+            "type": "string",
+            "description": "Headers HTTP additionnels séparés par \\n (ex: Authorization: Bearer token)."
+        }
+    ],
+    "output": {
+        "type": "array",
+        "description": "Liste de résultats par URL/service testés : vulnérable ou non, type d'injection, bases trouvées, données extraites."
+    }
+}

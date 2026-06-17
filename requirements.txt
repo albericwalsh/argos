@@ -5,3 +5,8 @@ flask-cors
 pyreadline3
 prompt_toolkit
 reportlab
+PyJWT>=2.8.0
+werkzeug>=3.0.0
+cryptography>=42.0.0
+requests>=2.31.0
+cryptography>=42.0.0

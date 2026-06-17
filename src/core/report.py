@@ -1,25 +1,35 @@
 """
 report_engine.py
-Argos — Report Engine v2
-Génère des rapports HTML dynamiques en assemblant les render.html
-de chaque module impliqué dans une mission.
+Argos — Report Engine v3 (chiffré)
+Génère des rapports HTML/PDF en assemblant les render.html de chaque
+module impliqué dans une mission.
 
-Architecture :
-  - Chaque module peut fournir un fichier render.html dans son dossier.
-  - Le moteur charge ces fragments via Jinja2 et les injecte dans le
-    layout principal du rapport.
-  - Si un module n'a pas de render.html, un renderer générique (JSON dump)
-    est utilisé automatiquement.
-  - La génération PDF reste assurée par ReportLab (rendu statique à partir
-    du HTML généré).
+SÉCURITÉ — différences avec v2 :
+  - generate_report() ne reçoit plus seulement `mission` (dict) mais
+    aussi `api_base`, `token`, `owner_key`, `owner_id` : nécessaires pour
+    (a) déchiffrer le workflow associé à la mission via l'API plutôt que
+        de le lire en clair sur disque (_build_step_module_map)
+    (b) chiffrer le rapport HTML/PDF généré avec la clé du owner avant
+        de l'envoyer à l'API, plutôt que de l'écrire en clair dans
+        REPORTS_DIR
+  - list_reports() ne scanne plus un dossier disque local : il interroge
+    l'API (GET /files/reports), qui ne retourne que les rapports dont le
+    user courant est owner ou pour lesquels il a la permission '*'.
+  - Les fichiers PDF (binaires) sont chiffrés en base64 avant l'enveloppe
+    AES-GCM (le contenu chiffré transite en JSON, donc en texte).
+
+Cette fonction est appelée depuis une route Flask authentifiée
+(src/WebUI/reports.py) qui dispose de g.token et g.enc_key pour le user
+courant — ces valeurs ne sont jamais persistées au-delà de la requête.
 """
 
+import base64
 import os
 import json
 from datetime import datetime
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, BaseLoader, TemplateNotFound
+from jinja2 import Environment, FileSystemLoader
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -50,11 +60,12 @@ SEVERITY_COLORS = {
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# MODULE REGISTRY HELPERS
+# MODULE REGISTRY HELPERS (inchangé — les modules eux-mêmes ne sont pas
+# considérés comme des données sensibles à chiffrer : ce sont du code/
+# des définitions d'application, pas des résultats de mission)
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _load_module_json(modules_dir: str, module_id: str) -> dict | None:
-    """Charge le module.json d'un module donné."""
     path = os.path.join(modules_dir, module_id, "module.json")
     if not os.path.exists(path):
         return None
@@ -66,51 +77,24 @@ def _load_module_json(modules_dir: str, module_id: str) -> dict | None:
 
 
 def _find_render_template(modules_dir: str, module_id: str) -> str | None:
-    """
-    Retourne le chemin absolu vers render.html du module, ou None si absent.
-    """
     path = os.path.join(modules_dir, module_id, "render.html")
     return path if os.path.exists(path) else None
 
 
-def _resolve_step_module(mission: dict, step_id: str, workflow_steps: list) -> str | None:
-    """
-    Retrouve le module_id associé à un step_id en parcourant
-    la définition de workflow stockée dans la mission.
-    """
-    for step in workflow_steps:
-        if step.get("id") == step_id:
-            return step.get("module")
-    return None
-
-
 # ══════════════════════════════════════════════════════════════════════════════
-# JINJA2 FRAGMENT RENDERER
+# JINJA2 FRAGMENT RENDERER (inchangé)
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Chemin vers le render.html générique (dans le même dossier que ce fichier)
 _ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
 _GENERIC_RENDER = os.path.join(_ENGINE_DIR, "renders", "generic_render.html")
 
 
-def _render_step_fragment(
-    template_path: str,
-    step: dict,
-    step_id: str,
-    step_index: int,
-    module: dict | None,
-) -> str:
-    """
-    Rend un fragment HTML pour un step donné en utilisant le template Jinja2
-    fourni (render.html du module, ou generic_render.html).
-    """
+def _render_step_fragment(template_path, step, step_id, step_index, module):
     template_dir  = os.path.dirname(os.path.abspath(template_path))
     template_file = os.path.basename(template_path)
 
-    env = Environment(
-        loader=FileSystemLoader(template_dir),
-        autoescape=False,  # HTML brut, les données sont de confiance (interne)
-    )
+    env = Environment(loader=FileSystemLoader(template_dir), autoescape=False)
+
     def _tojson(v, indent=None):
         def _default(obj):
             try:
@@ -120,7 +104,7 @@ def _render_step_fragment(
             except Exception:
                 pass
             if hasattr(obj, "_asdict"):
-                return obj._asdict() # type: ignore
+                return obj._asdict()  # type: ignore
             if hasattr(obj, "__dict__"):
                 return obj.__dict__
             return str(obj)
@@ -128,18 +112,13 @@ def _render_step_fragment(
 
     env.filters["tojson"] = _tojson
     env.filters["fromjson"] = json.loads
-    
+
     tmpl = env.get_template(template_file)
-    return tmpl.render(
-        step=step,
-        step_id=step_id,
-        step_index=step_index,
-        module=module or {},
-    )
+    return tmpl.render(step=step, step_id=step_id, step_index=step_index, module=module or {})
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# HELPERS UTILITAIRES
+# HELPERS UTILITAIRES (inchangé)
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _fmt_date(iso: str) -> str:
@@ -159,7 +138,8 @@ def _duration(start: str, end: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# HTML GENERATION — DYNAMIC
+# HTML GENERATION — DYNAMIC (logique de rendu inchangée, seule la source
+# du mapping step→module change : déchiffrée via API au lieu du disque)
 # ══════════════════════════════════════════════════════════════════════════════
 
 _HTML_SHELL = """\
@@ -182,8 +162,6 @@ _HTML_SHELL = """\
     background: var(--bg); color: var(--text); font-family: var(--font-sans);
     font-size: 13px; line-height: 1.6; padding: 40px;
   }}
-
-  /* ── Report header ── */
   .report-header {{
     border-bottom: 1px solid var(--border);
     padding-bottom: 24px; margin-bottom: 36px;
@@ -207,8 +185,6 @@ _HTML_SHELL = """\
   .badge-completed {{ background: rgba(0,229,160,.12); color: var(--accent); border: 1px solid rgba(0,229,160,.3); }}
   .badge-failed    {{ background: rgba(255,77,77,.12);  color: #ff4d4d;       border: 1px solid rgba(255,77,77,.3); }}
   .badge-running   {{ background: rgba(245,166,35,.12); color: #f5a623;       border: 1px solid rgba(245,166,35,.3); }}
-
-  /* ── Inputs section ── */
   .section {{ margin-bottom: 36px; }}
   .section-title {{
     font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
@@ -226,8 +202,6 @@ _HTML_SHELL = """\
     text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px;
   }}
   .meta-value {{ font-family: var(--font-mono); font-size: 12px; color: var(--text); font-weight: 600; }}
-
-  /* ── Step pipeline ── */
   .pipeline {{
     display: flex; align-items: center; gap: 0;
     margin-bottom: 28px; overflow-x: auto;
@@ -244,8 +218,6 @@ _HTML_SHELL = """\
   .pipeline-step + .pipeline-step {{ border-left: none; }}
   .pipeline-step-id {{ color: var(--accent); font-weight: 600; }}
   .pipeline-arrow {{ color: var(--muted); font-size: 12px; }}
-
-  /* ── Shared module section styles (each render.html extends these) ── */
   .mod-section {{ margin-bottom: 32px; }}
   .mod-header {{
     display: flex; justify-content: space-between; align-items: center;
@@ -261,7 +233,6 @@ _HTML_SHELL = """\
   .mod-stat  {{ text-align: right; }}
   .mod-stat-num {{ font-family: var(--font-mono); font-size: 18px; font-weight: 700; display: block; line-height: 1; }}
   .mod-stat-lbl {{ font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }}
-
   .table-wrap {{ border: 1px solid var(--border); border-radius: 0 0 4px 4px; overflow: hidden; }}
   .mod-empty {{
     padding: 32px; text-align: center; color: var(--muted);
@@ -269,8 +240,6 @@ _HTML_SHELL = """\
     border: 1px solid var(--border); border-top: none;
     border-radius: 0 0 4px 4px;
   }}
-
-  /* ── Footer ── */
   .report-footer {{
     margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border);
     display: flex; justify-content: space-between;
@@ -280,7 +249,6 @@ _HTML_SHELL = """\
 </head>
 <body>
 
-<!-- ── Header ── -->
 <div class="report-header">
   <div>
     <div class="report-brand">▸ Argos Security Platform — Scan Report</div>
@@ -295,22 +263,18 @@ _HTML_SHELL = """\
   </div>
 </div>
 
-<!-- ── Inputs ── -->
 <div class="section">
   <div class="section-title">// Paramètres de la mission</div>
   <div class="meta-grid">{meta_cells}</div>
 </div>
 
-<!-- ── Pipeline ── -->
 <div class="section">
   <div class="section-title">// Pipeline d'exécution</div>
   <div class="pipeline">{pipeline_steps}</div>
 </div>
 
-<!-- ── Step fragments ── -->
 {step_fragments}
 
-<!-- ── Footer ── -->
 <div class="report-footer">
   <span>Argos Security Platform</span>
   <span>Rapport confidentiel — usage interne</span>
@@ -322,14 +286,34 @@ _HTML_SHELL = """\
 """
 
 
-def generate_html(mission: dict, modules_dir: str) -> str:
-    inputs  = mission.get("inputs") or {}
-    result  = mission.get("result", {}) or {}
-    # Fallback : workflow.run() stocke toujours les inputs dans result["inputs"]
+def _build_step_module_map(mission: dict, api_base: str, token: str) -> dict[str, str]:
+    """
+    Construit {step_id: module_id} en déchiffrant le workflow associé
+    via l'API (jamais de lecture disque en clair).
+
+    Le user courant (token) doit être owner du workflow OU disposer de
+    workflows:* pour que l'API accepte de résoudre la clé de déchiffrement
+    — sinon l'appel échoue et on retombe sur le renderer générique.
+    """
+    workflow_id = mission.get("workflow", "")
+    if not workflow_id:
+        return {}
+
+    try:
+        from src.WebUI.crypto_bridge import fetch_and_decrypt_json
+        wf = fetch_and_decrypt_json(api_base, token, f"/files/workflows/{workflow_id}.json")
+        return {s["id"]: s["module"] for s in wf.get("steps", []) if "id" in s and "module" in s}
+    except Exception as e:
+        print(f"[report_engine] Impossible de déchiffrer le workflow {workflow_id} : {e}")
+        return {}
+
+
+def generate_html(mission: dict, modules_dir: str, api_base: str, token: str) -> str:
+    inputs = mission.get("inputs") or {}
+    result = mission.get("result", {}) or {}
     if not inputs:
         inputs = result.get("inputs") or {}
 
-    # ── Meta cells ──────────────────────────────────────────────────────────
     meta_cells = ""
     for k, v in inputs.items():
         meta_cells += (
@@ -339,44 +323,26 @@ def generate_html(mission: dict, modules_dir: str) -> str:
             f'</div>'
         )
 
-    # ── Identify steps in result (skip "inputs" key) ───────────────────────
     step_keys = [k for k in result if k != "inputs"]
 
-    # ── Pipeline visualisation ──────────────────────────────────────────────
     pipeline_steps = ""
     for i, sid in enumerate(step_keys):
         if i > 0:
             pipeline_steps += '<span class="pipeline-arrow">→</span>'
-        pipeline_steps += (
-            f'<div class="pipeline-step">'
-            f'<span class="pipeline-step-id">{sid}</span>'
-            f'</div>'
-        )
+        pipeline_steps += f'<div class="pipeline-step"><span class="pipeline-step-id">{sid}</span></div>'
 
-    # ── Step fragments ───────────────────────────────────────────────────────
-    # Try to load the workflow JSON to map step_id → module_id
-    # The mission stores `workflow` as a string id; we need the actual
-    # workflow definition to know which module handles which step.
-    # We support two approaches:
-    #   1. result contains a "_workflow_steps" hint (future enhancement)
-    #   2. We infer module_id by scanning modules_dir for a match by name
-    #      (fallback: use generic renderer)
-
-    # Build a step→module_id mapping from workflow files
-    step_module_map = _build_step_module_map(mission, modules_dir)
+    step_module_map = _build_step_module_map(mission, api_base, token)
 
     step_fragments = ""
     for idx, step_id in enumerate(step_keys):
-        step_data  = result[step_id]
-        module_id  = step_module_map.get(step_id)
+        step_data   = result[step_id]
+        module_id   = step_module_map.get(step_id)
         module_meta = _load_module_json(modules_dir, module_id) if module_id else None
         render_path = _find_render_template(modules_dir, module_id) if module_id else None
 
         if render_path is None:
-            # Use generic renderer
             render_path = _GENERIC_RENDER
 
-        # Add a section title before each fragment
         module_label = (module_meta.get("name") if module_meta else module_id) or step_id
         step_fragments += (
             f'<div class="section">'
@@ -384,60 +350,26 @@ def generate_html(mission: dict, modules_dir: str) -> str:
             f'{" · " + module_label if module_label != step_id else ""}'
             f'</div>'
         )
-        step_fragments += _render_step_fragment(
-            template_path=render_path,
-            step=step_data,
-            step_id=step_id,
-            step_index=idx,
-            module=module_meta,
-        )
+        step_fragments += _render_step_fragment(render_path, step_data, step_id, idx, module_meta)
         step_fragments += '</div>'
 
     return _HTML_SHELL.format(
-        mission_id    = mission.get("id", "—"),
-        mission_name  = mission.get("name", "Rapport de mission"),
-        workflow      = mission.get("workflow", "—"),
-        status        = mission.get("status", "—").upper(),
-        status_lower  = mission.get("status", "pending").lower(),
-        target        = inputs.get("target") or inputs.get("domaine") or next(iter(inputs.values()), "—"),
-        duration      = _duration(
-                            mission.get("date_created", ""),
-                            mission.get("date_completed", "")
-                        ),
-        generated_at  = datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        meta_cells    = meta_cells,
-        pipeline_steps= pipeline_steps,
-        step_fragments= step_fragments,
+        mission_id     = mission.get("id", "—"),
+        mission_name   = mission.get("name", "Rapport de mission"),
+        workflow       = mission.get("workflow", "—"),
+        status         = mission.get("status", "—").upper(),
+        status_lower   = mission.get("status", "pending").lower(),
+        target         = inputs.get("target") or inputs.get("domaine") or next(iter(inputs.values()), "—"),
+        duration       = _duration(mission.get("date_created", ""), mission.get("date_completed", "")),
+        generated_at   = datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        meta_cells     = meta_cells,
+        pipeline_steps = pipeline_steps,
+        step_fragments = step_fragments,
     )
 
 
-def _build_step_module_map(mission: dict, modules_dir: str) -> dict[str, str]:
-    """
-    Construit un dict {step_id: module_id} à partir du fichier workflow
-    correspondant à la mission.
-
-    Cherche le workflow dans APP_DIR/data/workflows/{workflow_id}.json.
-    Si introuvable, retourne un dict vide (le renderer générique sera utilisé).
-    """
-    from src.variables import APP_DIR
-    workflow_id = mission.get("workflow", "")
-    if not workflow_id:
-        return {}
-
-    wf_path = os.path.join(APP_DIR, "data", "workflows", f"{workflow_id}.json")
-    if not os.path.exists(wf_path):
-        return {}
-
-    try:
-        with open(wf_path, encoding="utf-8") as f:
-            wf = json.load(f)
-        return {step["id"]: step["module"] for step in wf.get("steps", []) if "id" in step and "module" in step}
-    except Exception:
-        return {}
-
-
 # ══════════════════════════════════════════════════════════════════════════════
-# PDF GENERATION (statique, résumé structuré)
+# PDF GENERATION (logique de rendu inchangée)
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _styles():
@@ -474,16 +406,22 @@ def _tbl_style():
     ])
 
 
-def generate_pdf(mission: dict, out_path: str, modules_dir: str) -> str:
-    inputs  = mission.get("inputs") or {}
-    result  = mission.get("result", {}) or {}
-    # Fallback : workflow.run() stocke toujours les inputs dans result["inputs"]
+def generate_pdf_bytes(mission: dict, modules_dir: str, api_base: str, token: str) -> bytes:
+    """
+    Génère le PDF en mémoire (BytesIO) au lieu d'écrire directement sur
+    disque en clair — le PDF est ensuite chiffré par l'appelant avant
+    d'être envoyé à l'API.
+    """
+    import io
+    inputs = mission.get("inputs") or {}
+    result = mission.get("result", {}) or {}
     if not inputs:
         inputs = result.get("inputs") or {}
     step_keys = [k for k in result if k != "inputs"]
 
+    buf = io.BytesIO()
     doc = SimpleDocTemplate(
-        out_path, pagesize=A4,
+        buf, pagesize=A4,
         leftMargin=18*mm, rightMargin=18*mm,
         topMargin=16*mm, bottomMargin=16*mm,
         title=f"Argos Report — {mission.get('id', '')}",
@@ -492,7 +430,6 @@ def generate_pdf(mission: dict, out_path: str, modules_dir: str) -> str:
     st = _styles()
     story = []
 
-    # Header
     story.append(Paragraph("▸ ARGOS SECURITY PLATFORM — SCAN REPORT", st["brand"]))
     story.append(Paragraph(mission.get("name", "Rapport de mission"), st["title"]))
     story.append(Paragraph(
@@ -503,45 +440,37 @@ def generate_pdf(mission: dict, out_path: str, modules_dir: str) -> str:
     ))
     story.append(HRFlowable(width=W, thickness=0.5, color=C_BORDER, spaceAfter=12))
 
-    # Inputs
     story.append(Paragraph("// PARAMÈTRES DE LA MISSION", st["section"]))
     in_data = [["Paramètre", "Valeur"]]
     for k, v in inputs.items():
         in_data.append([Paragraph(k, st["mono_mut"]), Paragraph(str(v) if v else "—", st["mono"])])  # type: ignore
     story.append(Table(in_data, colWidths=[60*mm, W - 60*mm], style=_tbl_style()))
 
-    # Steps — each module can optionally provide a pdf_render(step, module_meta) → list[Flowable]
-    # If not available, a generic JSON dump is rendered.
-    step_module_map = _build_step_module_map(mission, modules_dir)
+    step_module_map = _build_step_module_map(mission, api_base, token)
 
     for idx, step_id in enumerate(step_keys):
-        step_data  = result[step_id]
-        module_id  = step_module_map.get(step_id)
-        module_meta = _load_module_json(modules_dir, module_id) if module_id else None
+        step_data    = result[step_id]
+        module_id    = step_module_map.get(step_id)
+        module_meta  = _load_module_json(modules_dir, module_id) if module_id else None
         module_label = (module_meta.get("name") if module_meta else module_id) or step_id
 
-        story.append(Paragraph(
-            f"// {step_id.upper()} — {module_label.upper()}",
-            st["section"]
-        ))
+        story.append(Paragraph(f"// {step_id.upper()} — {module_label.upper()}", st["section"]))
 
-        # Try to call pdf_render from module's entry.py
         pdf_flowables = _try_module_pdf_render(modules_dir, module_id, step_data, module_meta, st, W)
         if pdf_flowables:
             story.extend(pdf_flowables)
         else:
-            # Generic: JSON dump
             output = step_data.get("output")
             error  = step_data.get("error")
             if error:
                 story.append(Paragraph(f"Erreur: {str(error)[:200]}", st["small"]))
             elif output is not None:
-                text = json.dumps(output, ensure_ascii=False, indent=2, default=lambda o: o.__dict__ if hasattr(o, "__dict__") else str(o))[:800]
+                text = json.dumps(output, ensure_ascii=False, indent=2,
+                                   default=lambda o: o.__dict__ if hasattr(o, "__dict__") else str(o))[:800]
                 story.append(Paragraph(text.replace("\n", "<br/>"), st["mono_mut"]))
             else:
                 story.append(Paragraph("Pas de sortie.", st["small"]))
 
-    # Footer
     story.append(Spacer(1, 16))
     story.append(HRFlowable(width=W, thickness=0.4, color=C_BORDER))
     story.append(Paragraph(
@@ -551,14 +480,10 @@ def generate_pdf(mission: dict, out_path: str, modules_dir: str) -> str:
     ))
 
     doc.build(story)
-    return out_path
+    return buf.getvalue()
 
 
 def _try_module_pdf_render(modules_dir, module_id, step_data, module_meta, st, W):
-    """
-    Tente de charger la fonction pdf_render(step, module, styles, page_width)
-    depuis le entry.py du module. Retourne une liste de Flowables ou None.
-    """
     if not module_id:
         return None
     entry_path = os.path.join(modules_dir, module_id, "entry.py")
@@ -580,54 +505,100 @@ def _try_module_pdf_render(modules_dir, module_id, step_data, module_meta, st, W
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PUBLIC API
+# PUBLIC API — chiffrement à l'écriture, plus d'écriture disque en clair
 # ══════════════════════════════════════════════════════════════════════════════
 
-def generate_report(mission: dict, reports_dir: str) -> dict:
+def generate_report(mission: dict, api_base: str, token: str, owner_key: str) -> dict:
     """
-    Génère HTML + PDF pour une mission.
-    Retourne {"html": path, "pdf": path, "id": mission_id}
+    Génère HTML + PDF pour une mission, CHIFFRE chaque fichier avec la
+    clé du user qui demande le rapport (owner_key, reçue depuis g.enc_key
+    de la requête authentifiée), puis les envoie à l'API via PUT.
+
+    Aucun fichier en clair n'est écrit sur disque à aucun moment.
+
+    Retourne {"id": mission_id, "html_filename": ..., "pdf_filename": ...}.
     """
     from src.variables import APP_DIR
-    modules_dir = os.path.join(APP_DIR, "data", "modules")
+    from src.WebUI.crypto_bridge import encrypt_and_put_json_with_key
+    from src.crypto_utils import encrypt_bytes
 
-    mission_id = mission.get("id", "unknown").lstrip("#").replace(" ", "_")
-    os.makedirs(reports_dir, exist_ok=True)
+    modules_dir = os.path.join(APP_DIR, "data", "modules")  # définitions de modules : non sensible, reste sur disque
+    mission_id  = mission.get("id", "unknown").lstrip("#").replace(" ", "_")
 
-    html_path = os.path.join(reports_dir, f"{mission_id}.html")
-    pdf_path  = os.path.join(reports_dir, f"{mission_id}.pdf")
+    html_content = generate_html(mission, modules_dir, api_base, token)
+    pdf_bytes    = generate_pdf_bytes(mission, modules_dir, api_base, token)
 
-    html_content = generate_html(mission, modules_dir)
-    with open(html_path, "w", encoding="utf-8") as f:
-        f.write(html_content)
+    # ── HTML : chiffré comme un JSON wrapper { "html": "<...>" } pour
+    #    réutiliser le même format d'enveloppe que les autres fichiers ──
+    html_filename = f"{mission_id}.html"
+    envelope_html = encrypt_bytes(html_content.encode("utf-8"), owner_key)
+    envelope_html["original_name"] = html_filename
+    _put_report_envelope(api_base, token, html_filename, envelope_html)
 
-    generate_pdf(mission, pdf_path, modules_dir)
+    # ── PDF : binaire, encodé en base64 avant chiffrement (le contenu
+    #    chiffré est transporté en JSON donc doit être texte) ──
+    pdf_filename = f"{mission_id}.pdf"
+    pdf_b64      = base64.b64encode(pdf_bytes).decode("ascii")
+    envelope_pdf = encrypt_bytes(pdf_b64.encode("utf-8"), owner_key)
+    envelope_pdf["original_name"] = pdf_filename
+    _put_report_envelope(api_base, token, pdf_filename, envelope_pdf)
 
-    return {"html": html_path, "pdf": pdf_path, "id": mission_id}
+    return {"id": mission_id, "html_filename": html_filename, "pdf_filename": pdf_filename}
 
 
-def list_reports(reports_dir: str) -> list[dict]:
+def _put_report_envelope(api_base: str, token: str, filename: str, envelope: dict):
+    import requests
+    resp = requests.put(
+        f"{api_base}/files/reports/{filename}",
+        headers={"Authorization": f"Bearer {token}"},
+        json=envelope,
+        timeout=15,
+    )
+    resp.raise_for_status()
+
+
+def list_reports(api_base: str, token: str) -> list[dict]:
     """
-    Scanne le dossier reports_dir et retourne les métadonnées de chaque rapport.
+    Liste les rapports visibles par le user courant via l'API
+    (owner ou permission rapports:*). Remplace l'ancien scan disque.
+
+    Retourne une liste de dicts {id, html_file, pdf_file, generated}
+    compatible avec le template reports.html existant.
     """
-    os.makedirs(reports_dir, exist_ok=True)
+    import requests
+
+    try:
+        resp = requests.get(
+            f"{api_base}/files/reports",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        files = resp.json()
+    except Exception as e:
+        print(f"[report_engine] Impossible de lister les rapports : {e}")
+        return []
+
     seen: dict[str, dict] = {}
-    for fname in os.listdir(reports_dir):
-        base, ext = os.path.splitext(fname)
+    for f in files:
+        original = f.get("original_name", "")
+        base, ext = os.path.splitext(original)
         if ext not in (".html", ".pdf"):
             continue
         if base not in seen:
-            seen[base] = {"id": base, "html": None, "pdf": None, "mtime": 0}
-        path = os.path.join(reports_dir, fname)
-        seen[base][ext[1:]] = fname
-        seen[base]["mtime"] = max(seen[base]["mtime"], os.path.getmtime(path))
+            seen[base] = {"id": base, "html_file": None, "pdf_file": None}
+        seen[base][f"{ext[1:]}_file"] = f["name"]
 
-    reports = []
-    for base, info in seen.items():
-        reports.append({
-            "id":        info["id"],
-            "html_file": info.get("html"),
-            "pdf_file":  info.get("pdf"),
-            "generated": datetime.fromtimestamp(info["mtime"]).strftime("%Y-%m-%d %H:%M:%S"),
-        })
-    return sorted(reports, key=lambda r: r["generated"], reverse=True)
+    return [
+        {"id": base, "html_file": info["html_file"], "pdf_file": info["pdf_file"], "generated": "—"}
+        for base, info in sorted(seen.items(), reverse=True)
+    ]
+
+
+def fetch_report_html(api_base: str, token: str, enc_key: str, filename: str) -> str:
+    """Récupère et déchiffre un rapport HTML pour aperçu côté serveur si besoin."""
+    from src.WebUI.crypto_bridge import fetch_and_decrypt_json
+    # Le rapport HTML est stocké comme texte chiffré directement (pas un dict JSON) ;
+    # on réutilise decrypt_bytes directement plutôt que fetch_and_decrypt_json
+    # qui s'attend à du JSON. Voir reports.py pour l'implémentation d'aperçu.
+    raise NotImplementedError("Utiliser la route /reports/preview de reports.py")

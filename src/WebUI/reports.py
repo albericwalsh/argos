@@ -1,39 +1,39 @@
 """
 src/WebUI/reports.py
 Argos — Routes pour le module Reports.
-S'enregistre directement sur l'instance Flask `app` (pas de Blueprint).
 
-Usage dans app.py :
-    from src.WebUI.reports import register_reports_routes, REPORTS_DIR
-    register_reports_routes(app)
+SÉCURITÉ — réécriture complète :
+  - Plus aucune lecture/écriture sur REPORTS_DIR en clair.
+  - list_reports() et generate_report() viennent de src.core.report_engine,
+    qui passe systématiquement par l'API chiffrée avec owner_id.
+  - L'aperçu HTML et le téléchargement PDF déchiffrent en mémoire avec la
+    clé du user courant (g.enc_key) au moment de la requête, sans jamais
+    écrire le clair sur disque.
+
+S'enregistre directement sur l'instance Flask `app` (pas de Blueprint),
+comme dans la version précédente, pour rester compatible avec server.py.
 """
 
+import base64
 import os
-from datetime import datetime
-from flask import request, jsonify, send_from_directory, abort, render_template
+from flask import request, jsonify, Response, abort, render_template, g
 
 from src.core.report import generate_report, list_reports
-from src.variables import APP_DIR, MISSIONS_REGISTERY
-
-# Dossier de stockage des rapports
-REPORTS_DIR = os.path.join(APP_DIR, "data", "reports")
+from src.WebUI.auth import login_required, API_BASE
+from src.variables import MISSIONS_REGISTERY
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _get_missions():
+def _completed_missions_live() -> list[dict]:
     """
-    Retourne MISSIONS_REGISTERY sous forme de dict {id: mission_obj}.
-    Compatible avec le fait que MISSIONS_REGISTERY est une liste.
+    Missions terminées disponibles EN MÉMOIRE process pour cette session
+    (celles lancées depuis ce process WebUI et déjà arrivées à leur fin).
+    Ne lit plus jamais l'historique sur disque en clair : pour l'historique
+    complet, le frontend doit interroger /proxy/files/missions et déchiffrer
+    en JS (voir missions.html), ce endpoint ne sert que la sélection rapide
+    dans la modale de génération de rapport.
     """
-    return {m.id: m for m in MISSIONS_REGISTERY}
+    from datetime import datetime
 
-
-def _mission_to_dict(m) -> dict:
-    """
-    Sérialise un objet Mission en dict plat pour le report engine.
-    Gère les dates (datetime ou str) et le workflow (objet ou str).
-    """
     def _iso(val):
         if val is None:
             return ""
@@ -48,67 +48,34 @@ def _mission_to_dict(m) -> dict:
             return val
         return getattr(val, "id", str(val))
 
-    return {
-        "id":             getattr(m, "id",             ""),
-        "name":           getattr(m, "name",           ""),
-        "workflow":       _workflow_id(getattr(m, "workflow", "")),
-        "status":         getattr(m, "status",         ""),
-        "inputs":         getattr(m, "inputs",         {}) or {},
-        "result":         getattr(m, "result",         {}) or {},
-        "date_created":   _iso(getattr(m, "date_created",   None)),
-        "date_completed": _iso(getattr(m, "date_completed", None)),
-    }
+    return [
+        {
+            "id":             getattr(m, "id", ""),
+            "name":           getattr(m, "name", ""),
+            "workflow":       _workflow_id(getattr(m, "workflow", "")),
+            "status":         getattr(m, "status", ""),
+            "inputs":         getattr(m, "inputs", {}) or {},
+            "date_created":   _iso(getattr(m, "date_created", None)),
+            "date_completed": _iso(getattr(m, "date_completed", None)),
+        }
+        for m in MISSIONS_REGISTERY
+        if getattr(m, "status", None) == "completed"
+    ]
 
-
-def _completed_missions_from_files() -> list[dict]:
-    """
-    Charge les missions complétées depuis data/missions/ (historique fichiers).
-    Retourne une liste de dicts bruts (déjà sérialisés).
-    """
-    from src.utils import open_file
-    missions_dir = os.path.join(APP_DIR, "data", "missions")
-    results = []
-    if not os.path.exists(missions_dir):
-        return results
-    for folder in sorted(os.listdir(missions_dir), reverse=True):
-        folder_path = os.path.join(missions_dir, folder)
-        if not os.path.isdir(folder_path):
-            continue
-        for file in os.listdir(folder_path):
-            if file.endswith(".json"):
-                data = open_file(os.path.join(folder_path, file))
-                if isinstance(data, dict) and data.get("status") == "completed":
-                    results.append(data)
-    return results
-
-
-# ── Enregistrement des routes ─────────────────────────────────────────────────
 
 def register_reports_routes(app):
     """Enregistre toutes les routes /reports/* sur l'instance Flask."""
 
-    # ── Page principale ───────────────────────────────────────────────────────
     @app.route("/reports")
+    @login_required
     def reports_page():
-        reports = list_reports(REPORTS_DIR)
-
-        # Missions live complétées (en mémoire)
-        live_completed = [
-            _mission_to_dict(m)
-            for m in MISSIONS_REGISTERY
-            if getattr(m, "status", None) == "completed"
-        ]
-        live_ids = {m["id"] for m in live_completed}
-
-        # Missions complétées depuis les fichiers (évite doublons)
-        file_completed = [
-            m for m in _completed_missions_from_files()
-            if m.get("id") not in live_ids
-        ]
-
-        # On passe des dicts à Jinja (pas d'objets Mission)
-        completed = live_completed + file_completed
-
+        """
+        Squelette : la liste des rapports est chargée et déchiffrée côté
+        navigateur via ArgosDecrypt.listReports() (cohérent avec
+        dashboard.html / workflows.html / missions.html).
+        La liste des missions complétées (pour la modale "Générer un
+        rapport") vient des missions en mémoire de CETTE session.
+        """
         from src.variables import (
             MODULES_REGISTERY, WORKFLOWS_REGISTERY,
             WEB_SERVER_HOST, WEB_SERVER_PORT,
@@ -118,85 +85,162 @@ def register_reports_routes(app):
         variables = {
             "WEB_SERVER_HOST": WEB_SERVER_HOST,
             "WEB_SERVER_PORT": WEB_SERVER_PORT,
-            "APP_NAME": APP_NAME,
-            "APP_VERSION": APP_VERSION,
+            "APP_NAME":        APP_NAME,
+            "APP_VERSION":     APP_VERSION,
             "APP_DESCRIPTION": APP_DESCRIPTION,
-            "APP_AUTHOR": APP_AUTHOR,
-            "APP_LICENSE": APP_LICENSE,
-            "APP_REPOSITORY": APP_REPOSITORY,
-            "MODULES": MODULES_REGISTERY,
-            "WORKFLOWS": WORKFLOWS_REGISTERY,
+            "APP_AUTHOR":      APP_AUTHOR,
+            "APP_LICENSE":     APP_LICENSE,
+            "APP_REPOSITORY":  APP_REPOSITORY,
+            "MODULES":         MODULES_REGISTERY,
+            "WORKFLOWS":       WORKFLOWS_REGISTERY,
         }
         return render_template(
             "reports.html",
-            reports=reports,
-            missions=completed,
-            **variables
+            missions=_completed_missions_live(),
+            **variables,
         )
 
-    # ── Génération ────────────────────────────────────────────────────────────
     @app.route("/reports/generate", methods=["POST"])
+    @login_required
     def reports_generate():
         """
-        POST /reports/generate
-        Body JSON : { "mission_id": "#MSN-XXXXXXXX" }
+        POST /reports/generate   Body JSON : { "mission_id": "#MSN-XXXXXXXX" }
+
+        Récupère la mission (en mémoire si en cours de session, sinon
+        déchiffrée via l'API), génère HTML+PDF, et les chiffre avec la
+        clé du user courant avant envoi à l'API. owner_id du rapport =
+        user courant (celui qui a demandé la génération).
         """
         data       = request.get_json(force=True) or {}
         mission_id = data.get("mission_id", "").strip()
         if not mission_id:
             abort(400, description="mission_id manquant")
 
-        # 1. Cherche en mémoire (objets Mission)
-        mission_obj = next(
-            (m for m in MISSIONS_REGISTERY if m.id == mission_id), None
-        )
+        mission_obj = next((m for m in MISSIONS_REGISTERY if m.id == mission_id), None)
         if mission_obj:
-            mission_dict = _mission_to_dict(mission_obj)
+            from datetime import datetime as _dt
+            mission_dict = {
+                "id":             mission_obj.id,
+                "name":           mission_obj.name,
+                "workflow":       getattr(mission_obj.workflow, "id", mission_obj.workflow),
+                "status":         mission_obj.status,
+                "inputs":         getattr(mission_obj, "inputs", {}) or {},
+                "result":         mission_obj.result or {},
+                "date_created":   mission_obj.date_created.isoformat() if isinstance(mission_obj.date_created, _dt) else mission_obj.date_created,
+                "date_completed": mission_obj.date_completed.isoformat() if isinstance(mission_obj.date_completed, _dt) else mission_obj.date_completed,
+            }
         else:
-            # 2. Cherche dans les fichiers
-            file_missions = _completed_missions_from_files()
-            mission_dict = next(
-                (m for m in file_missions if m.get("id") == mission_id), None
+            # Mission pas en mémoire : on la récupère déchiffrée via l'API.
+            # On ne sait pas a priori dans quel sous-dossier mission elle se
+            # trouve ; on demande donc au front de fournir mission_folder
+            # si jamais cette situation se présente (hors scope ici, le
+            # flux normal passe par une mission encore en mémoire de session).
+            abort(404, description=f"Mission {mission_id} introuvable dans la session courante")
+
+        try:
+            info = generate_report(
+                mission_dict,
+                api_base=API_BASE,
+                token=g.token,
+                owner_key=g.enc_key,
             )
-            if not mission_dict:
-                abort(404, description=f"Mission {mission_id} introuvable")
+        except Exception as e:
+            abort(500, description=f"Échec de la génération du rapport : {e}")
 
-        info    = generate_report(mission_dict, REPORTS_DIR)
-        reports = list_reports(REPORTS_DIR)
-        report  = next((r for r in reports if r["id"] == info["id"]), None)
-        return jsonify({"ok": True, "report": report})
+        return jsonify({"ok": True, "report": info})
 
-    # ── Aperçu HTML ───────────────────────────────────────────────────────────
     @app.route("/reports/preview/<report_id>")
+    @login_required
     def reports_preview(report_id):
-        safe_id = os.path.basename(report_id)
-        if not os.path.exists(os.path.join(REPORTS_DIR, f"{safe_id}.html")):
-            abort(404)
-        return send_from_directory(
-            os.path.abspath(REPORTS_DIR),
-            f"{safe_id}.html",
-            mimetype="text/html",
-        )
+        """
+        Déchiffre et retourne le HTML du rapport en mémoire, jamais écrit
+        sur disque en clair. Nécessite que le user soit owner ou ait
+        rapports:*  (vérifié côté API lors du GET du payload chiffré).
+        """
+        safe_id  = os.path.basename(report_id)
+        filename = f"{safe_id}.html"
 
-    # ── Téléchargement PDF ────────────────────────────────────────────────────
+        try:
+            from src.WebUI.crypto_bridge import fetch_and_decrypt_json
+        except ImportError:
+            abort(500, description="Module de déchiffrement indisponible")
+
+        html_text = _fetch_and_decrypt_text(filename)
+        if html_text is None:
+            abort(404)
+
+        return Response(html_text, mimetype="text/html")
+
     @app.route("/reports/download/<report_id>")
+    @login_required
     def reports_download(report_id):
-        safe_id = os.path.basename(report_id)
-        if not os.path.exists(os.path.join(REPORTS_DIR, f"{safe_id}.pdf")):
+        """
+        Déchiffre le PDF (stocké en base64 chiffré) en mémoire et le
+        retourne en téléchargement, sans jamais l'écrire sur disque.
+        """
+        safe_id  = os.path.basename(report_id)
+        filename = f"{safe_id}.pdf"
+
+        pdf_b64_text = _fetch_and_decrypt_text(filename)
+        if pdf_b64_text is None:
             abort(404)
-        return send_from_directory(
-            os.path.abspath(REPORTS_DIR),
-            f"{safe_id}.pdf",
-            as_attachment=True,
-            download_name=f"argos-report-{safe_id}.pdf",
+
+        try:
+            pdf_bytes = base64.b64decode(pdf_b64_text)
+        except Exception:
+            abort(500, description="Rapport PDF corrompu")
+
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="argos-report-{safe_id}.pdf"'},
         )
 
-    # ── Suppression ───────────────────────────────────────────────────────────
     @app.route("/reports/delete/<report_id>", methods=["DELETE"])
+    @login_required
     def reports_delete(report_id):
+        """Relais pur vers l'API pour suppression (owner ou rapports:* requis)."""
+        import requests
         safe_id = os.path.basename(report_id)
+        ok = True
         for ext in ("html", "pdf"):
-            p = os.path.join(REPORTS_DIR, f"{safe_id}.{ext}")
-            if os.path.exists(p):
-                os.remove(p)
-        return jsonify({"ok": True})
+            try:
+                resp = requests.delete(
+                    f"{API_BASE}/files/reports/{safe_id}.{ext}",
+                    headers={"Authorization": f"Bearer {g.token}"},
+                    timeout=10,
+                )
+                if resp.status_code not in (200, 404):
+                    ok = False
+            except Exception:
+                ok = False
+        return jsonify({"ok": ok})
+
+
+def _fetch_and_decrypt_text(filename: str) -> str | None:
+    """
+    Récupère le payload chiffré d'un rapport via l'API et le déchiffre
+    en mémoire avec la clé résolue par l'API (owner ou emprunt '*').
+    Retourne le texte en clair, ou None si introuvable/inaccessible.
+    """
+    import requests
+    from src.crypto_utils import decrypt_bytes
+
+    try:
+        resp = requests.get(
+            f"{API_BASE}/files/reports/{filename}",
+            headers={"Authorization": f"Bearer {g.token}"},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+        payload = resp.json()
+        plaintext = decrypt_bytes(
+            nonce_b64=payload["nonce"],
+            ciphertext_b64=payload["ciphertext"],
+            b64_key=payload["enc_key"],
+        )
+        return plaintext.decode("utf-8")
+    except Exception as e:
+        print(f"[reports] Échec déchiffrement {filename} : {e}")
+        return None

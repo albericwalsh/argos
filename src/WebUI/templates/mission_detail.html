@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
-
+{% if missions | selectattr('status', 'eq', 'running') | list %}
+<meta http-equiv="refresh" content="3">
+{% endif %}
 <div class="page-header">
   <div style="display:flex;align-items:center;gap:12px">
     <a href="/missions" class="btn btn-ghost" style="padding:6px 10px">← Retour</a>

@@ -3,7 +3,6 @@
 <!-- ══════════════ PAGE : WORKFLOW BUILDER ══════════════ -->
 
 <style>
-/* ── Layout ── */
 .workflow-builder {
   display: grid;
   grid-template-columns: 220px 1fr 300px;
@@ -13,8 +12,6 @@
   border-radius: 4px;
   overflow: hidden;
 }
-
-/* ── Page header ── */
 .wf-name-input {
   background: transparent;
   border: none;
@@ -29,8 +26,6 @@
   transition: border-color .15s;
 }
 .wf-name-input:focus { border-color: var(--accent); }
-
-/* ── Palette ── */
 .builder-palette {
   background: var(--surface);
   border-right: 1px solid var(--border);
@@ -97,8 +92,6 @@
 .pm-name { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pm-type { font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-top: 1px; }
 .pm-drag-handle { color: var(--muted); font-size: 14px; cursor: grab; }
-
-/* ── Canvas ── */
 .builder-canvas {
   background: var(--bg);
   display: flex;
@@ -124,11 +117,7 @@
   align-items: center;
   gap: 0;
 }
-
-/* Drop zone highlight */
 .canvas-area.drag-over { background: rgba(0,229,160,.03); }
-
-/* ── Flow nodes ── */
 .wf-start-node, .wf-end-node {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -165,8 +154,6 @@
   flex-shrink: 0;
 }
 .wf-add-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-/* ── Step card ── */
 .wf-step {
   width: 340px;
   background: var(--surface);
@@ -225,7 +212,6 @@
 }
 .wf-step-arg-key { color: var(--muted); min-width: 80px; flex-shrink: 0; }
 .wf-step-arg-val { color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
 .canvas-empty {
   display: flex;
   flex-direction: column;
@@ -240,8 +226,6 @@
   padding: 40px;
 }
 .canvas-empty-icon { font-size: 32px; opacity: .2; margin-bottom: 4px; }
-
-/* ── Inspector ── */
 .builder-inspector {
   background: var(--surface);
   border-left: 1px solid var(--border);
@@ -270,7 +254,6 @@
 }
 .inspector-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .inspector-body { flex: 1; overflow-y: auto; padding: 14px; }
-
 .inspector-empty {
   display: flex;
   flex-direction: column;
@@ -285,8 +268,6 @@
   padding: 24px;
 }
 .inspector-empty-icon { font-size: 24px; opacity: .3; }
-
-/* Inspector form */
 .insp-group { margin-bottom: 14px; }
 .insp-label {
   font-family: var(--font-mono);
@@ -327,23 +308,9 @@
   background-position: right 8px center;
 }
 .insp-select:focus { border-color: var(--accent); }
-
-/* arg rows */
-.arg-val-row {
-  margin-bottom: 8px;
-}
-.arg-val-label {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-.arg-val-key {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--accent);
-}
+.arg-val-row { margin-bottom: 8px; }
+.arg-val-label { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+.arg-val-key { font-family: var(--font-mono); font-size: 10px; font-weight: 600; color: var(--accent); }
 .arg-val-type {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -353,28 +320,9 @@
   border-radius: 2px;
   padding: 0 4px;
 }
-.arg-val-desc {
-  font-size: 10px;
-  color: var(--muted);
-  line-height: 1.4;
-  margin-bottom: 4px;
-}
-
-/* inputs section */
-.input-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 4px;
-  margin-bottom: 4px;
-  align-items: center;
-}
-
-/* Resource picker */
-.res-select-wrap {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
+.arg-val-desc { font-size: 10px; color: var(--muted); line-height: 1.4; margin-bottom: 4px; }
+.input-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 4px; margin-bottom: 4px; align-items: center; }
+.res-select-wrap { display: flex; gap: 4px; align-items: center; }
 .res-select-wrap .insp-select { flex: 1; }
 .res-badge {
   display: inline-block;
@@ -383,8 +331,6 @@
   border: 1px solid rgba(0,229,160,.25); border-radius: 3px;
   padding: 1px 5px; white-space: nowrap;
 }
-
-/* JSON preview */
 .json-preview {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -402,14 +348,8 @@
 .json-s { color: #a78bfa; }
 .json-n { color: #f5a623; }
 .json-b { color: #4dc8ff; }
-
-/* Workflow global form */
 .wf-meta-form { padding: 0 0 14px; }
-.insp-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 14px 0;
-}
+.insp-divider { height: 1px; background: var(--border); margin: 14px 0; }
 .dep-badge {
   display: inline-flex;
   align-items: center;
@@ -425,7 +365,34 @@
 }
 .dep-badge-x { cursor: pointer; color: var(--muted); }
 .dep-badge-x:hover { color: #ff4d4d; }
+
+/* ── Indicateur de chargement initial (workflow chiffré) ── */
+.builder-loading-overlay {
+  position: fixed; inset: 0;
+  background: rgba(10,10,12,.85);
+  z-index: 9998;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px;
+}
+.builder-loading-overlay.hidden { display: none; }
+.builder-loading-spinner {
+  width: 22px; height: 22px;
+  border: 3px solid rgba(0,229,160,.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: bspin .7s linear infinite;
+}
+@keyframes bspin { to { transform: rotate(360deg); } }
+.builder-loading-text {
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+}
 </style>
+
+<!-- Overlay affiché uniquement pendant le déchiffrement initial d'un workflow existant -->
+<div class="builder-loading-overlay hidden" id="builder-loading-overlay">
+  <div class="builder-loading-spinner"></div>
+  <div class="builder-loading-text">Déchiffrement du workflow…</div>
+</div>
 
 <!-- Page header -->
 <div class="page-header">
@@ -528,8 +495,8 @@ let state = {
   id: '',
   name: '',
   description: '',
-  inputs: {},        // { key: defaultValue }
-  steps: [],         // [{ id, module, args: {key: val}, depends_on: [] }]
+  inputs: {},
+  steps: [],
 };
 
 let selectedStepIdx = null;
@@ -585,7 +552,6 @@ function renderCanvas() {
   const flow = document.createElement('div');
   flow.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:0;width:100%';
 
-  // START
   const start = el('div', 'wf-start-node', '▶ START');
   flow.appendChild(start);
 
@@ -613,9 +579,7 @@ function renderCanvas() {
   area.appendChild(flow);
 }
 
-function connector() {
-  return el('div', 'wf-connector');
-}
+function connector() { return el('div', 'wf-connector'); }
 
 function addBtn(insertIdx) {
   const b = document.createElement('button');
@@ -631,7 +595,6 @@ function stepCard(step, idx) {
   card.className = 'wf-step' + (idx === selectedStepIdx ? ' selected' : '');
   card.onclick = () => selectStep(idx);
 
-  // module meta
   const mod = MODULES.find(m => m.id === step.module);
   const modName = mod ? mod.name : step.module;
   const modStyle = mod ? moduleStyleJS(mod.name) : 'background:rgba(100,100,100,.1);color:#888';
@@ -658,7 +621,6 @@ function stepCard(step, idx) {
 }
 
 function moduleStyleJS(name) {
-  // Mirror the Flask module_style logic
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0x7fffffff;
   h = h % 360;
@@ -679,7 +641,6 @@ function renderInspector() {
   const body = document.getElementById('inspector-body');
   if (activeTab === 'json') { renderJSONTab(body); return; }
   if (activeTab === 'workflow') { renderWorkflowTab(body); return; }
-  // step tab
   if (selectedStepIdx === null || selectedStepIdx >= state.steps.length) {
     body.innerHTML = `<div class="inspector-empty">
       <div class="inspector-empty-icon">🔍</div>
@@ -745,7 +706,6 @@ function argRowsForStep(step) {
   const params = (mod && mod.parameters) ? mod.parameters : [];
 
   if (params.length === 0) {
-    // Fallback: show existing args as generic key/value (no schema)
     const entries = Object.entries(step.args || {});
     if (entries.length === 0) return '<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Aucun argument défini pour ce module.</div>';
     return entries.map(([k, v], i) => `
@@ -758,16 +718,12 @@ function argRowsForStep(step) {
   }
 
   return params.map(p => {
-    const currentVal = step.args.hasOwnProperty(p.name)
-      ? step.args[p.name]
-      : '';
+    const currentVal = step.args.hasOwnProperty(p.name) ? step.args[p.name] : '';
     const displayVal = Array.isArray(currentVal) ? JSON.stringify(currentVal) : (currentVal ?? '');
     const placeholder = p.type === 'string' ? '$inputs.' + p.name : (p.type === 'array' ? '["val1","val2"]' : p.name);
 
-    // ── Type resource : select depuis /resources/list ──────────────
     if (p.type === 'resource') {
       const selectId = `res-select-${p.name}-${selectedStepIdx}`;
-      // Charge les ressources de façon async et peuple le select
       setTimeout(() => {
         const sel = document.getElementById(selectId);
         if (!sel) return;
@@ -775,7 +731,6 @@ function argRowsForStep(step) {
           const current = step.args[p.name] || '';
           sel.innerHTML = '<option value="">— choisir une ressource —</option>' +
             list.map(r => `<option value="${r.path.replace(/"/g,'&quot;')}"${r.path === current ? ' selected' : ''}>${r.name} (${r.size_str})</option>`).join('');
-          // Sélection courante non trouvée dans la liste → afficher quand même
           if (current && !list.find(r => r.path === current)) {
             sel.innerHTML += `<option value="${current.replace(/"/g,'&quot;')}" selected>${current}</option>`;
           }
@@ -886,7 +841,6 @@ function addStepFromModule(moduleId, moduleName, moduleCategory) {
 
 function addStepAt(insertIdx, moduleId) {
   pushHistory();
-  const mod = moduleId ? MODULES.find(m => m.id === moduleId) : null;
   const _mod = moduleId ? MODULES.find(m => m.id === moduleId) : MODULES[0];
   const _initArgs = {};
   if (_mod && _mod.parameters) {
@@ -904,15 +858,12 @@ function addStepAt(insertIdx, moduleId) {
   render();
 }
 
-function addStepPrompt() {
-  addStepAt(state.steps.length);
-}
+function addStepPrompt() { addStepAt(state.steps.length); }
 
 function deleteStep(idx) {
   pushHistory();
   const deletedId = state.steps[idx].id;
   state.steps.splice(idx, 1);
-  // clean up references in depends_on
   state.steps.forEach(s => {
     s.depends_on = (s.depends_on || []).filter(d => d !== deletedId);
   });
@@ -938,11 +889,9 @@ function clearCanvas() {
   render();
 }
 
-// ── Step field updates ────────────────────────────────────────
 function updateStepId(val) {
   const oldId = state.steps[selectedStepIdx].id;
   state.steps[selectedStepIdx].id = val;
-  // update depends_on references
   state.steps.forEach((s, i) => {
     if (i !== selectedStepIdx)
       s.depends_on = (s.depends_on || []).map(d => d === oldId ? val : d);
@@ -955,12 +904,10 @@ function updateStepModule(val) {
   pushHistory();
   const step = state.steps[selectedStepIdx];
   step.module = val;
-  // Reinit args from new module's parameters
   const mod = MODULES.find(m => m.id === val);
   if (mod && mod.parameters && mod.parameters.length > 0) {
     const newArgs = {};
     mod.parameters.forEach(p => {
-      // Keep existing value if key already present
       newArgs[p.name] = step.args.hasOwnProperty(p.name) ? step.args[p.name] : '';
     });
     step.args = newArgs;
@@ -971,7 +918,6 @@ function updateStepModule(val) {
 
 function updateArgValByKey(key, rawVal) {
   const step = state.steps[selectedStepIdx];
-  // Auto-parse JSON arrays
   let val = rawVal;
   if (typeof rawVal === 'string' && rawVal.trim().startsWith('[')) {
     try { val = JSON.parse(rawVal); } catch(e) { val = rawVal; }
@@ -1000,7 +946,6 @@ function copyRef(ref) {
   navigator.clipboard.writeText(ref).then(() => showToast(`Copié : ${ref}`, 'success'));
 }
 
-// ── Workflow inputs ───────────────────────────────────────────
 function addInput() {
   const keys = Object.keys(state.inputs);
   state.inputs[`input${keys.length + 1}`] = '';
@@ -1068,7 +1013,7 @@ function filterPalette(query) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// JSON BUILD & SAVE
+// JSON BUILD & SAVE  (chiffrement client — le serveur ne voit jamais le clair)
 // ════════════════════════════════════════════════════════════════
 function buildJSON() {
   return {
@@ -1099,13 +1044,12 @@ async function saveWorkflow() {
   if (!json.id) { showToast("Définissez un identifiant dans l'onglet Workflow", 'error'); switchTab('workflow'); return; }
 
   try {
-    const res = await fetch('/workflows/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(json),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.ok) throw new Error(data.error || 'Erreur serveur');
+    // Chiffrement EN MÉMOIRE NAVIGATEUR avec la clé du user connecté,
+    // puis PUT direct du payload chiffré vers /proxy/files/workflows/<filename>.
+    // Le serveur WebUI et l'API ne voient jamais le contenu en clair.
+    const filename = `${json.id}.json`;
+    await ArgosDecrypt.saveWorkflow(filename, json);
+
     showToast(`Workflow "${json.name}" sauvegardé`, 'success');
     document.getElementById('wf-status-badge').textContent = json.id;
     document.getElementById('wf-status-badge').className = 'badge badge-success';
@@ -1176,25 +1120,51 @@ document.getElementById('wf-name').addEventListener('input', function() {
   if (activeTab === 'json') renderInspector();
 });
 
-// Initial push — ou chargement d'un workflow existant
-{% if load_wf %}
-(function() {
-  const wf = {{ load_wf | tojson }};
-  state.id          = wf.id || '';
-  state.name        = wf.name || '';
-  state.description = wf.description || '';
-  state.inputs      = wf.inputs || {};
-  state.steps       = (wf.steps || []).map(s => ({
-    id:         s.id,
-    module:     s.module,
-    args:       s.args || {},
-    depends_on: s.depends_on || [],
-  }));
-  document.getElementById('wf-name').value = state.name;
-})();
-{% endif %}
-pushHistory();
-render();
+// Chargement d'un workflow existant (déchiffré côté navigateur uniquement).
+// Le serveur ne transmet que l'identifiant (load_id), jamais le contenu.
+const LOAD_WF_ID = {{ load_id | tojson }};
+
+async function initBuilder() {
+  const overlay = document.getElementById('builder-loading-overlay');
+
+  if (LOAD_WF_ID) {
+    overlay.classList.remove('hidden');
+    try {
+      const wf = await ArgosDecrypt.fetchWorkflowJSON(`${LOAD_WF_ID}.json`);
+      state.id          = wf.id || '';
+      state.name        = wf.name || '';
+      state.description = wf.description || '';
+      state.inputs       = wf.inputs || {};
+      state.steps       = (wf.steps || []).map(s => ({
+        id:         s.id,
+        module:     s.module,
+        args:       s.args || {},
+        depends_on: s.depends_on || [],
+      }));
+      document.getElementById('wf-name').value = state.name;
+    } catch (e) {
+      showToast(`Impossible de charger le workflow : ${e.message}`, 'error');
+    } finally {
+      overlay.classList.add('hidden');
+    }
+  }
+  pushHistory();
+  render();
+}
+
+// decrypt.js est chargé en script de type "module", donc différé : il peut
+// ne pas encore être attaché à window au moment où ce script inline
+// s'exécute. On attend explicitement sa disponibilité avant d'initialiser.
+function waitForArgosDecrypt(callback, attempts = 0) {
+  if (window.ArgosDecrypt) { callback(); return; }
+  if (attempts > 100) {  // ~5s max
+    showToast('Erreur de chargement du module de chiffrement', 'error');
+    return;
+  }
+  setTimeout(() => waitForArgosDecrypt(callback, attempts + 1), 50);
+}
+
+waitForArgosDecrypt(initBuilder);
 </script>
 
 {% endblock %}

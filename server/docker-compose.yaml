@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    ports:
+      - "5001:5000"
+    volumes:
+      - .:/app          # hot-reload : les modifs locales sont reflétées
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=server.py
+      - SECRET_KEY=change-me-in-prod
+      - TOKEN_EXPIRY_HOURS=24
+      - FLASK_DEBUG=1
+      - DATA_DIR=/app/data  # dossier des fichiers chiffrés

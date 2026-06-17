@@ -1,11 +1,22 @@
+"""
+src/classes/missions.py
+─────────────────────────
+SÉCURITÉ : Mission.execute() n'écrit plus jamais le résultat en clair
+sur disque local. Le résultat est chiffré en mémoire avec la clé du
+user qui a déclenché la mission, puis envoyé à l'API via PUT.
+
+Cela nécessite que Mission reçoive la clé et le token du user courant
+au moment de sa création (transmis depuis la requête HTTP authentifiée
+qui a déclenché /run/<workflow_id>) — jamais relus depuis un cookie ou
+un stockage côté serveur après coup.
+"""
+
 from datetime import datetime
-import os
 import json
 import threading
 
-from src.utils import create_file
-from src.variables import APP_DIR
 import src.mission_progress as progress_store
+from src.WebUI.crypto_bridge import encrypt_and_put_json_with_key
 
 
 class MissionEncoder(json.JSONEncoder):
@@ -19,7 +30,13 @@ class MissionEncoder(json.JSONEncoder):
 
 class Mission:
 
-    def __init__(self, name, workflow):
+    def __init__(self, name, workflow, owner_id: str, owner_key: str, api_base: str, api_token: str):
+        """
+        owner_id  : id du user qui lance la mission (devient owner_id du fichier)
+        owner_key : clé AES-256 b64url du owner, utilisée pour chiffrer le résultat
+        api_base  : URL de l'API (ex: http://localhost:5001)
+        api_token : JWT du owner, pour authentifier le PUT vers l'API
+        """
         self.id             = "#MSN-" + str(abs(hash(name + datetime.now().isoformat())))[:8]
         self.name           = name
         self.workflow       = workflow
@@ -28,17 +45,19 @@ class Mission:
         self.date_created   = datetime.now()
         self.date_completed = None
 
+        self._owner_id  = owner_id
+        self._owner_key = owner_key
+        self._api_base  = api_base
+        self._api_token = api_token
+
     def execute(self, inputs):
         self.status = "running"
 
-        # ── Enregistre le tracker de progression ────────────────────────────
         step_ids = [
             (step.get("id"), step.get("module"))
             for step in self.workflow.wf.get("steps", [])
         ]
         progress = progress_store.register(self.id, step_ids)
-
-        # Injecte le tracker dans le workflow pour que run() l'utilise
         self.workflow.progress = progress
 
         try:
@@ -49,13 +68,8 @@ class Mission:
             self.status = "failed"
         finally:
             self.date_completed = datetime.now()
-
-            # Signale la fin au stream SSE
             progress.finish_mission(self.status)
 
-            folder_name = f"{self.date_created.strftime('%Y-%m-%d_%H-%M-%S')}_{self.id}"
-            folder_path = os.path.join(APP_DIR, f"data/missions/{folder_name}")
-            os.makedirs(folder_path, exist_ok=True)
             data = {
                 "id":             self.id,
                 "name":           self.name,
@@ -66,12 +80,25 @@ class Mission:
                 "date_created":   self.date_created.isoformat(),
                 "date_completed": self.date_completed.isoformat(),
             }
-            create_file(
-                os.path.join(folder_path, f"{self.id}.json"),
-                json.dumps(data, indent=2, ensure_ascii=False, cls=MissionEncoder)
-            )
+            # Sérialise via MissionEncoder puis ré-ouvre en dict simple,
+            # pour garantir que tout ce qu'on chiffre est JSON-compatible.
+            serializable = json.loads(json.dumps(data, ensure_ascii=False, cls=MissionEncoder))
 
-            # Garde le tracker en mémoire 5 min après la fin (pour les clients lents)
+            mission_folder_name = f"{self.date_created.strftime('%Y-%m-%d_%H-%M-%S')}_{self.id.lstrip('#')}"
+            filename = f"{self.id.lstrip('#')}.json"
+
+            try:
+                encrypt_and_put_json_with_key(
+                    api_base=self._api_base,
+                    token=self._api_token,
+                    path=f"/files/missions/{mission_folder_name}/{filename}",
+                    data=serializable,
+                    original_name=filename,
+                    b64_key=self._owner_key,
+                )
+            except Exception as e:
+                print(f"[Mission] Échec de la sauvegarde chiffrée du résultat : {e}")
+
             def _cleanup():
                 import time; time.sleep(300)
                 progress_store.unregister(self.id)

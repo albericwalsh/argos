@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Argos — Connexion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body, html { height: 100%; margin: 0; }
+
+    .login-root {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      padding: 24px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .login-card::before {
+      content: "";
+      display: block;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: .6;
+    }
+
+    .login-header {
+      padding: 28px 28px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      color: var(--accent);
+    }
+    .login-logo svg { width: 20px; height: 20px; stroke: var(--accent); }
+    .login-subtitle {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: .06em;
+    }
+
+    /* ── Tabs ── */
+    .auth-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 11px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color .12s, border-color .12s;
+      user-select: none;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .auth-tab:hover:not(.active) { color: var(--text); }
+
+    .auth-panel { display: none; padding: 24px 28px 28px; }
+    .auth-panel.active { display: block; }
+
+    .login-field { margin-bottom: 16px; }
+    .login-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .login-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 9px 10px;
+      outline: none;
+      transition: border-color .15s;
+      box-sizing: border-box;
+    }
+    .login-input:focus { border-color: var(--accent); }
+    .login-input.error { border-color: #ff4d4d; }
+
+    .auth-alert {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    .auth-alert.error {
+      background: rgba(255,77,77,.08);
+      border: 1px solid rgba(255,77,77,.25);
+      color: #ff4d4d;
+    }
+    .auth-alert.success {
+      background: rgba(0,229,160,.08);
+      border: 1px solid rgba(0,229,160,.25);
+      color: var(--accent);
+    }
+
+    .login-btn {
+      width: 100%;
+      justify-content: center;
+      padding: 10px;
+      font-size: 12px;
+      margin-top: 4px;
+      letter-spacing: .06em;
+    }
+
+    .login-footer {
+      padding: 14px 28px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .field-hint {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Spinner ── */
+    .btn-spinner {
+      width: 12px; height: 12px;
+      border: 2px solid rgba(0,0,0,.2);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .btn-spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="login-root">
+  <div class="login-card">
+
+    <div class="login-header">
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        ARGOS
+      </div>
+      <div class="login-subtitle">Security Operations Center</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Connexion</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Créer un compte</button>
+    </div>
+
+    <!-- ── Panel LOGIN ── -->
+    <div class="auth-panel active" id="panel-login">
+      {% if error and not reg_success %}
+      <div class="auth-alert error">✕ {{ error }}</div>
+      {% endif %}
+
+      <form method="POST" action="/login{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}">
+        <input type="hidden" name="_form" value="login">
+        <div class="login-field">
+          <label class="login-label" for="username">Identifiant</label>
+          <input class="login-input" type="text" id="username" name="username"
+                 placeholder="admin" autocomplete="username" autofocus
+                 value="{{ request.form.get('username', '') if request.form.get('_form') == 'login' else '' }}">
+        </div>
+        <div class="login-field">
+          <label class="login-label" for="password">Mot de passe</label>
+          <input class="login-input" type="password" id="password" name="password"
+                 placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary login-btn" type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+            <polyline points="10 17 15 12 10 7"/>
+            <line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          Se connecter
+        </button>
+      </form>
+    </div>
+
+    <!-- ── Panel REGISTER ── -->
+    <div class="auth-panel" id="panel-register">
+      <div id="reg-alert" style="display:none" class="auth-alert"></div>
+
+      {% if reg_success %}
+      <div class="auth-alert success">✓ Compte créé — vous pouvez vous connecter</div>
+      {% endif %}
+
+      <div class="login-field">
+        <label class="login-label" for="reg-username">Identifiant</label>
+        <input class="login-input" type="text" id="reg-username" placeholder="ex: alice"
+               autocomplete="off" oninput="clearRegAlert()">
+      </div>
+      <div class="login-field">
+        <label class="login-label" for="reg-password">Mot de passe</label>
+        <input class="login-input" type="password" id="reg-password"
+               placeholder="••••••••" autocomplete="new-password" oninput="checkStrength()">
+        <div class="field-hint" id="strength-hint"></div>
+      </div>
+      <div class="login-field">
+        <label class="login-label" for="reg-confirm">Confirmer le mot de passe</label>
+        <input class="login-input" type="password" id="reg-confirm"
+               placeholder="••••••••" autocomplete="new-password" oninput="clearRegAlert()">
+      </div>
+
+      <button class="btn btn-primary login-btn" id="btn-register" onclick="submitRegister()">
+        <span class="btn-spinner" id="reg-spinner"></span>
+        Créer le compte
+      </button>
+    </div>
+
+    <div class="login-footer">
+      Accès restreint — authentification requise
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+{% if reg_success or (error and request.form.get('_form') == 'register') %}
+// Ouvre l'onglet register si on vient d'y faire une action
+document.addEventListener('DOMContentLoaded', () => switchTab('register'));
+{% endif %}
+
+function switchTab(tab) {
+  ['login', 'register'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('panel-' + t).classList.toggle('active', t === tab);
+  });
+  if (tab === 'login') document.getElementById('username')?.focus();
+  if (tab === 'register') document.getElementById('reg-username')?.focus();
+}
+
+// ── Password strength ─────────────────────────────────────────────────────────
+function checkStrength() {
+  const pw    = document.getElementById('reg-password').value;
+  const hint  = document.getElementById('strength-hint');
+  if (!pw) { hint.textContent = ''; return; }
+  if (pw.length < 8)  { hint.style.color = '#ff4d4d'; hint.textContent = 'Trop court (min. 8 caractères)'; return; }
+  if (pw.length < 12) { hint.style.color = '#f5a623'; hint.textContent = 'Correct'; return; }
+  hint.style.color = 'var(--accent)'; hint.textContent = 'Fort';
+}
+
+// ── Register ──────────────────────────────────────────────────────────────────
+function clearRegAlert() {
+  const a = document.getElementById('reg-alert');
+  a.style.display = 'none';
+}
+
+function showRegAlert(msg, type = 'error') {
+  const a = document.getElementById('reg-alert');
+  a.className = 'auth-alert ' + type;
+  a.textContent = (type === 'error' ? '✕ ' : '✓ ') + msg;
+  a.style.display = 'flex';
+}
+
+async function submitRegister() {
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const confirm  = document.getElementById('reg-confirm').value;
+
+  if (!username || !password) return showRegAlert('Tous les champs sont requis');
+  if (password.length < 8)    return showRegAlert('Mot de passe trop court (min. 8 caractères)');
+  if (password !== confirm)   return showRegAlert('Les mots de passe ne correspondent pas');
+
+  const btn     = document.getElementById('btn-register');
+  const spinner = document.getElementById('reg-spinner');
+  btn.disabled  = true;
+  spinner.classList.add('active');
+
+  try {
+    const res  = await fetch('/auth/register', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showRegAlert(data.error || 'Erreur lors de la création');
+    } else {
+      showRegAlert('Compte créé — vous pouvez vous connecter', 'success');
+      document.getElementById('reg-username').value = '';
+      document.getElementById('reg-password').value = '';
+      document.getElementById('reg-confirm').value  = '';
+      document.getElementById('strength-hint').textContent = '';
+      // Bascule vers login après 1.5s
+      setTimeout(() => {
+        switchTab('login');
+        document.getElementById('username').value = username;
+        document.getElementById('username').focus();
+      }, 1500);
+    }
+  } catch {
+    showRegAlert('API inaccessible');
+  } finally {
+    btn.disabled = false;
+    spinner.classList.remove('active');
+  }
+}
+
+// Valider avec Entrée
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const active = document.querySelector('.auth-panel.active').id;
+  if (active === 'panel-register') submitRegister();
+});
+</script>
+
+</body>
+</html>

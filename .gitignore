@@ -1,7 +1,7 @@
 ./argos_env
 *.pyc
 **/__pycache__/**
-./data/missions/*
-./data/reports/*
-./data/ressources/*
+**/data/missions/**
+**/data/reports/**
+**/data/ressources/**
 *.env

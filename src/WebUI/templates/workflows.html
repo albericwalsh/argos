@@ -32,64 +32,41 @@
   .wf-card-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
   .wf-card-id   { font-family: var(--font-mono); font-size: 10px; color: var(--accent); }
   .wf-card-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
-
-  .wf-card-steps {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
-  }
+  .wf-card-steps { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
   .wf-step-pill {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    padding: 2px 7px;
-    border-radius: 3px;
-    background: rgba(255,255,255,.04);
-    border: 1px solid var(--border);
-    color: var(--muted);
+    font-family: var(--font-mono); font-size: 9px; padding: 2px 7px; border-radius: 3px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--muted);
     white-space: nowrap;
   }
   .wf-step-arrow { color: var(--muted); font-size: 10px; }
-
-  .wf-card-inputs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
+  .wf-card-inputs { display: flex; flex-wrap: wrap; gap: 4px; }
   .wf-input-pill {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    padding: 2px 7px;
-    border-radius: 3px;
-    background: rgba(0,229,160,.07);
-    border: 1px solid rgba(0,229,160,.2);
-    color: var(--accent);
+    font-family: var(--font-mono); font-size: 9px; padding: 2px 7px; border-radius: 3px;
+    background: rgba(0,229,160,.07); border: 1px solid rgba(0,229,160,.2); color: var(--accent);
   }
-
   .wf-card-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 4px;
-    border-top: 1px solid var(--border);
-    padding-top: 10px;
+    display: flex; gap: 6px; margin-top: 4px;
+    border-top: 1px solid var(--border); padding-top: 10px;
   }
-
   .empty-state {
-    padding: 60px;
-    text-align: center;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    border: 1px dashed var(--border);
-    border-radius: 4px;
+    padding: 60px; text-align: center; color: var(--muted);
+    font-family: var(--font-mono); font-size: 12px;
+    border: 1px dashed var(--border); border-radius: 4px;
   }
   .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: .3; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .mini-spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid rgba(0,229,160,.2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite; margin-right: 6px;
+    vertical-align: middle;
+  }
 </style>
 
 <div class="page-header">
   <div>
     <div class="page-title">Workflows</div>
-    <div class="page-sub">{{ WORKFLOWS | length }} workflow{{ 's' if WORKFLOWS | length != 1 }} enregistré{{ 's' if WORKFLOWS | length != 1 }}</div>
+    <div class="page-sub" id="wf-count">Chargement…</div>
   </div>
   <a class="btn btn-primary" href="/builder">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px">
@@ -99,76 +76,91 @@
   </a>
 </div>
 
-{% if WORKFLOWS %}
-<div class="wf-grid">
-  {% for wf in WORKFLOWS %}
-  <div class="wf-card">
-    <div class="wf-card-header">
-      <div class="wf-card-icon">{{ wf.name[:2].upper() }}</div>
-      <div style="flex:1;min-width:0">
-        <div class="wf-card-name">{{ wf.name }}</div>
-        <div class="wf-card-id">{{ wf.id }}</div>
-      </div>
-    </div>
-
-    {% if wf.description %}
-    <div class="wf-card-desc">{{ wf.description }}</div>
-    {% endif %}
-
-    <!-- Steps pipeline -->
-    {% if wf.raw_steps %}
-    <div class="wf-card-steps">
-      {% for step in wf.raw_steps %}
-      {% if not loop.first %}<span class="wf-step-arrow">→</span>{% endif %}
-      <span class="wf-step-pill">{{ step.module }}</span>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Inputs -->
-    {% if wf.entry_args %}
-    <div class="wf-card-inputs">
-      {% for k in wf.entry_args %}
-      <span class="wf-input-pill">{{ k }}</span>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <div class="wf-card-actions">
-      <a class="btn btn-primary" style="font-size:11px;padding:5px 12px" href="/run/{{ wf.id }}">
-        ▶ Lancer
-      </a>
-      <a class="btn btn-ghost" style="font-size:11px;padding:5px 12px" href="/builder?load={{ wf.id }}">
-        ✎ Éditer
-      </a>
-      <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px;color:#ff4d4d;margin-left:auto"
-              onclick="deleteWorkflow('{{ wf.id }}', '{{ wf.name }}')">
-        ✕
-      </button>
-    </div>
+<div id="wf-container">
+  <div class="empty-state">
+    <span class="mini-spinner"></span> Déchiffrement des workflows…
   </div>
-  {% endfor %}
 </div>
-{% else %}
-<div class="empty-state">
-  <div class="empty-icon">⬡</div>
-  Aucun workflow créé —
-  <a href="/builder" style="color:var(--accent)">créer le premier</a>
-</div>
-{% endif %}
 
 <script>
+function renderCard(wf) {
+  const steps = wf.steps || [];
+  const stepsHtml = steps.map((s, i) =>
+    (i > 0 ? '<span class="wf-step-arrow">→</span>' : '') +
+    `<span class="wf-step-pill">${s.module}</span>`
+  ).join('');
+
+  const inputsHtml = Object.keys(wf.inputs || {}).map(k =>
+    `<span class="wf-input-pill">${k}</span>`
+  ).join('');
+
+  return `
+    <div class="wf-card">
+      <div class="wf-card-header">
+        <div class="wf-card-icon">${(wf.name || '?').slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div class="wf-card-name">${wf.name}</div>
+          <div class="wf-card-id">${wf.id}</div>
+        </div>
+      </div>
+      ${wf.description ? `<div class="wf-card-desc">${wf.description}</div>` : ''}
+      ${steps.length ? `<div class="wf-card-steps">${stepsHtml}</div>` : ''}
+      ${Object.keys(wf.inputs || {}).length ? `<div class="wf-card-inputs">${inputsHtml}</div>` : ''}
+      <div class="wf-card-actions">
+        <a class="btn btn-primary" style="font-size:11px;padding:5px 12px" href="/run/${wf.id}">▶ Lancer</a>
+        <a class="btn btn-ghost" style="font-size:11px;padding:5px 12px" href="/builder?load=${wf.id}">✎ Éditer</a>
+        <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px;color:#ff4d4d;margin-left:auto"
+                onclick="deleteWorkflow('${wf.id}', '${(wf.name||'').replace(/'/g,"\\'")}')">✕</button>
+      </div>
+    </div>`;
+}
+
+async function loadWorkflows() {
+  const container = document.getElementById('wf-container');
+  let workflows = [];
+
+  try {
+    const files = await ArgosDecrypt.listWorkflows();
+    for (const f of files) {
+      try {
+        const wf = await ArgosDecrypt.fetchWorkflowJSON(f.name);
+        workflows.push(wf);
+      } catch (e) {
+        console.error(`Échec déchiffrement ${f.name}`, e);
+      }
+    }
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state" style="color:#ff4d4d">Erreur : ${e.message}</div>`;
+    return;
+  }
+
+  document.getElementById('wf-count').textContent =
+    `${workflows.length} workflow${workflows.length !== 1 ? 's' : ''} enregistré${workflows.length !== 1 ? 's' : ''}`;
+
+  if (workflows.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">⬡</div>
+      Aucun workflow créé — <a href="/builder" style="color:var(--accent)">créer le premier</a>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="wf-grid">${workflows.map(renderCard).join('')}</div>`;
+}
+
 async function deleteWorkflow(id, name) {
   if (!confirm(`Supprimer le workflow "${name}" ?`)) return;
   try {
-    const res = await fetch(`/workflows/delete/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/workflows/delete/${id}`, { method: 'DELETE', credentials: 'same-origin' });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Erreur');
-    location.reload();
+    loadWorkflows();
   } catch(e) {
     alert('Erreur : ' + e.message);
   }
 }
+
+document.addEventListener('DOMContentLoaded', loadWorkflows);
 </script>
 
 {% endblock %}

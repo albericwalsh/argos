@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-{% if missions | selectattr('status', 'eq', 'running') | list %}
-<meta http-equiv="refresh" content="3">
-{% endif %}
+
 <div class="page-header">
   <div>
     <div class="page-title">Missions</div>
@@ -13,59 +11,17 @@
 
 <div class="card">
   <div class="card-header">
-    <div class="card-title"><div class="card-title-dot blue"></div> {{ missions | length }} mission(s)</div>
+    <div class="card-title"><div class="card-title-dot blue"></div> <span id="mission-count">…</span> mission(s)</div>
   </div>
   <div class="card-body" style="padding:0">
     <table class="data-table">
       <thead><tr>
         <th>ID</th><th>Nom</th><th>Workflow</th><th>Statut</th><th>Créée</th><th>Durée</th><th></th>
       </tr></thead>
-      <tbody>
-        {% for m in missions %}
-        <tr style="cursor:pointer" onclick="window.location='/missions/{{ m.id | replace('#','') }}'">
-          <td class="mono">{{ m.id }}</td>
-          <td>{{ m.name }}</td>
-          <td class="mono">{{ m.workflow }}</td>
-          <td>
-            {% if m.status == 'completed' %}
-              <span class="badge badge-success">Succès</span>
-            {% elif m.status == 'running' %}
-              <span class="badge badge-running">
-                <span style="display:inline-block;width:7px;height:7px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;vertical-align:middle"></span>
-                En cours
-              </span>
-            {% elif m.status == 'failed' %}
-              <span class="badge badge-error">Erreur</span>
-            {% else %}
-              <span class="badge badge-pending">{{ m.status }}</span>
-            {% endif %}
-          </td>
-          <td class="dim">{{ m.date_created[:16] | replace('T', ' ') }}</td>
-          <td class="dim">
-            {% if m.date_completed %}
-              {% set s = ((m.date_completed[:19]) ) %}
-              {# Durée affichée côté client via JS si running #}
-              {% if m.status == 'running' %}
-                <span class="live-duration" data-start="{{ m.date_created }}">…</span>
-              {% else %}
-                {{ m.date_completed[:16] | replace('T', ' ') }}
-              {% endif %}
-            {% else %}
-              {% if m.status == 'running' %}
-                <span class="live-duration" data-start="{{ m.date_created }}">…</span>
-              {% else %}—{% endif %}
-            {% endif %}
-          </td>
-          <td style="text-align:right">
-            <a href="/missions/{{ m.id | replace('#','') }}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
-               onclick="event.stopPropagation()">Détail →</a>
-          </td>
-        </tr>
-        {% else %}
+      <tbody id="missions-tbody">
         <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">
-          Aucune mission enregistrée
+          <span class="mini-spinner"></span> Déchiffrement de l'historique…
         </td></tr>
-        {% endfor %}
       </tbody>
     </table>
   </div>
@@ -73,18 +29,114 @@
 
 <style>
 @keyframes spin { to { transform: rotate(360deg); } }
-.data-table tr[onclick]:hover td { background: rgba(255,255,255,.025); }
+.data-table tr[data-clickable]:hover td { background: rgba(255,255,255,.025); cursor: pointer; }
+.mini-spinner {
+  display: inline-block; width: 12px; height: 12px;
+  border: 2px solid rgba(0,229,160,.2); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .7s linear infinite; margin-right: 6px;
+  vertical-align: middle;
+}
 </style>
 
 <script>
-// Compteurs de durée live pour les missions en cours
-document.querySelectorAll('.live-duration').forEach(el => {
-  const start = new Date(el.dataset.start);
-  setInterval(() => {
-    const secs = Math.floor((Date.now() - start) / 1000);
-    el.textContent = `${Math.floor(secs/60)}m ${secs%60}s`;
-  }, 1000);
-});
+// Missions en cours injectées directement (état mémoire process, non chiffré sur disque)
+const LIVE_MISSIONS = {{ live_missions_json | tojson }};
+
+function badgeFor(status) {
+  if (status === 'completed') return '<span class="badge badge-success">Succès</span>';
+  if (status === 'running')   return `<span class="badge badge-running">
+      <span style="display:inline-block;width:7px;height:7px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;vertical-align:middle"></span>
+      En cours</span>`;
+  if (status === 'failed')    return '<span class="badge badge-error">Erreur</span>';
+  return `<span class="badge badge-pending">${status}</span>`;
+}
+
+function fmtDuration(m) {
+  if (m.status === 'running') {
+    return `<span class="live-duration" data-start="${m.date_created}">…</span>`;
+  }
+  if (m.date_completed && m.date_created) {
+    const d1 = new Date(m.date_created), d2 = new Date(m.date_completed);
+    const secs = Math.floor((d2 - d1) / 1000);
+    return `${Math.floor(secs/60)}m ${secs%60}s`;
+  }
+  return '—';
+}
+
+function fmtDate(iso) {
+  return (iso || '').slice(0, 16).replace('T', ' ');
+}
+
+function renderRow(m) {
+  const cleanId = (m.id || '').replace('#', '');
+  return `
+    <tr data-clickable onclick="window.location='/missions/${cleanId}'">
+      <td class="mono">${m.id}</td>
+      <td>${m.name}</td>
+      <td class="mono">${m.workflow}</td>
+      <td>${badgeFor(m.status)}</td>
+      <td class="dim">${fmtDate(m.date_created)}</td>
+      <td class="dim">${fmtDuration(m)}</td>
+      <td style="text-align:right">
+        <a href="/missions/${cleanId}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
+           onclick="event.stopPropagation()">Détail →</a>
+      </td>
+    </tr>`;
+}
+
+function startLiveDurations() {
+  document.querySelectorAll('.live-duration').forEach(el => {
+    const start = new Date(el.dataset.start);
+    setInterval(() => {
+      const secs = Math.floor((Date.now() - start) / 1000);
+      el.textContent = `${Math.floor(secs/60)}m ${secs%60}s`;
+    }, 1000);
+  });
+}
+
+async function loadMissionHistory() {
+  const tbody = document.getElementById('missions-tbody');
+  const liveIds = new Set(LIVE_MISSIONS.map(m => m.id));
+  let history = [];
+
+  try {
+    // { mission_name: [ {name, original_name, size}, ... ] }
+    const missionsMap = await ArgosDecrypt.listMissions();
+
+    for (const [missionName, files] of Object.entries(missionsMap)) {
+      for (const f of files) {
+        try {
+          const data = await ArgosDecrypt.fetchMissionJSON(missionName, f.name);
+          if (!liveIds.has(data.id)) history.push(data);
+        } catch (e) {
+          console.error(`Échec déchiffrement ${missionName}/${f.name}`, e);
+        }
+      }
+    }
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:#ff4d4d">
+      Erreur de chargement : ${e.message}</td></tr>`;
+    return;
+  }
+
+  const all = [...LIVE_MISSIONS, ...history];
+  document.getElementById('mission-count').textContent = all.length;
+
+  if (all.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">
+      Aucune mission enregistrée</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = all.map(renderRow).join('');
+  startLiveDurations();
+
+  if (all.some(m => m.status === 'running')) {
+    setTimeout(() => location.reload(), 5000);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadMissionHistory);
 </script>
 
 {% endblock %}

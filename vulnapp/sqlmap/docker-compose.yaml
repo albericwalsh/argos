@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:10.11
+    restart: always
+    ports:
+      - "8082:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: dvwa
+      MYSQL_USER: dvwa
+      MYSQL_PASSWORD: dvwapass
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  web:
+    build: .
+    restart: always
+    ports:
+      - "8081:80"
+    environment:
+      DB_HOST: db
+      DB_USER: dvwa
+      DB_PASS: dvwapass
+      DB_NAME: dvwa
+    depends_on:
+      - db
+
+volumes:
+  db_data:

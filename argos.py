@@ -14,7 +14,7 @@ import threading
 def main():
     init_app_variables(os.path.dirname(os.path.abspath(__file__)))
     init_modules_registery()
-    init_worflow_registery()
+    # init_worflow_registery() //TODO: gérer le login pour initialiser les workflows.
     init_command()
     args = sys.argv[1:]
 

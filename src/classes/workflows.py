@@ -1,35 +1,51 @@
+"""
+src/classes/workflows.py
+─────────────────────────
+SÉCURITÉ : Workflow ne lit plus jamais un fichier .json en clair sur
+disque (open_file(self.path) a été supprimé). Un Workflow est désormais
+construit à partir d'un dict déjà déchiffré, obtenu via
+src.WebUI.crypto_bridge.fetch_and_decrypt_json() — appelé uniquement
+dans le contexte d'une requête authentifiée (post-login).
+"""
+
 from src.variables import get_modules
-from src.utils import open_file
 
 
 class Workflow:
-    def __init__(self, path):
-        self.path     = path
-        wf            = open_file(self.path)
-        self.id       = wf.get("id")
-        self.results  = {}
-        self.status   = "pending"
-        self.progress = None   # injecté par Mission.execute()
-        self.load()
+    def __init__(self, wf_dict: dict, source_name: str | None = None):
+        """
+        wf_dict      : contenu JSON déjà déchiffré du workflow
+        source_name  : nom du fichier .enc d'origine (informatif uniquement,
+                       utilisé pour les ré-écritures via l'API, pas pour
+                       relire en clair sur disque)
+        """
+        self.source_name = source_name
+        self.results      = {}
+        self.status        = "pending"
+        self.progress      = None   # injecté par Mission.execute()
+        self.load(wf_dict)
+
+    @classmethod
+    def from_dict(cls, wf_dict: dict, source_name: str | None = None) -> "Workflow":
+        return cls(wf_dict, source_name=source_name)
 
     @property
     def raw_steps(self):
         return self.wf.get("steps", [])
 
-    def load(self):
-        self.wf          = open_file(self.path)
-        self.id          = self.wf.get("id")
-        self.name        = self.wf.get("name")
-        self.description = self.wf.get("description")
-        self.entry_args  = self.wf.get("inputs", {})
-        self.steps       = []
+    def load(self, wf_dict: dict):
+        self.wf           = wf_dict
+        self.id            = self.wf.get("id")
+        self.name          = self.wf.get("name")
+        self.description   = self.wf.get("description")
+        self.entry_args    = self.wf.get("inputs", {})
+        self.steps         = []
         for step in self.wf.get("steps", []):
             module = get_modules(step.get("module"))
             if module is None:
                 print(f"ERROR : No module '{step.get('module')}' found.")
                 return
             self.steps.append(module)
-        print(self.wf)
 
     def run(self, inputs):
         missing = [key for key in self.entry_args if key not in inputs]
@@ -41,7 +57,7 @@ class Workflow:
 
         context     = {"inputs": inputs}
         failed_step = None
-        prog        = self.progress  # None si appelé sans Mission (tests directs)
+        prog        = self.progress
 
         for step_data in self.wf.get("steps", []):
             step_id   = step_data.get("id")
@@ -82,10 +98,6 @@ class Workflow:
         return context
 
     def _run_with_log_capture(self, module, args, step_id, prog):
-        """
-        Exécute module.execute() en capturant stdout vers le tracker SSE.
-        Si prog est None, exécution normale sans capture.
-        """
         if prog is None:
             return module.execute(args)
 
@@ -93,7 +105,6 @@ class Workflow:
         import io
 
         class _SSEWriter(io.TextIOBase):
-            """Écrit chaque ligne sur stdout ET dans le tracker SSE."""
             def __init__(self, original, tracker, sid):
                 self._orig    = original
                 self._tracker = tracker
@@ -121,7 +132,6 @@ class Workflow:
             sys.stdout = old_stdout
 
     def resolve_value(self, value, context):
-        """Résout les références comme $inputs.domaine ou $step1.output.port"""
         if not isinstance(value, str) or not value.startswith("$"):
             return value
         parts  = value[1:].split(".")

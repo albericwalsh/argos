@@ -1,0 +1,49 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "scrypt:32768:8:1$UyzG5ZmoyiBwQOO3$f69a0a50f277c75043dae5cf3ddd6687e19bb21cad3fdc02dca374950774004e969263b3caeaf707fbe320fc0b9d5107b63c12db28e87d6884e90aaef6f2eaef",
+    "modules": [
+      "*"
+    ],
+    "rapports_perm": [
+      "*"
+    ],
+    "missions_perm": [
+      "*"
+    ],
+    "worklows_perm": [
+      "*"
+    ],
+    "ressources_perm": [
+      "*"
+    ],
+    "users_perm": [
+      "*"
+    ],
+    "encryption_key": "JcdISHy-ohiWiDDaaFINjW9YGJct46jo5yFU_dM0D-Q="
+  },
+  {
+    "id": 3,
+    "username": "alberic",
+    "password": "scrypt:32768:8:1$POKXtSpBSyMqYKNS$ba6f1a1ce9508f36203b93b8bd1a5e45839740d1dce6de6df220f48f6f86a66c99883071faf00748edcbe6382be6fa9ef86de9bcf4700bb3a06ecb9de1ed96cd",
+    "encryption_key": "DEJ-XE0kZkvXE2omZKu_ODiGfx-vKQGPo03MA5Ww0kc=",
+    "modules": [],
+    "rapports_perm": [
+      "read",
+      "write"
+    ],
+    "missions_perm": [
+      "read",
+      "write"
+    ],
+    "worklows_perm": [
+      "read",
+      "write"
+    ],
+    "ressources_perm": [
+      "read"
+    ],
+    "users_perm": []
+  }
+]

@@ -9,6 +9,17 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+
+{#
+  enc_key est injectée depuis g.enc_key par le décorateur @login_required.
+  Elle est placée dans un <meta> invisible — jamais dans localStorage.
+  decrypt.js la lit une seule fois au chargement puis la garde en mémoire JS.
+  Elle est accessible depuis Python via : from flask import g; g.enc_key
+#}
+{% if g.enc_key is defined %}
+<meta name="argos-enc-key" content="{{ g.enc_key }}">
+{% endif %}
+
 <div class="app">
 
   <!-- TOPBAR -->
@@ -27,6 +38,16 @@
       <div class="status-label">Opérationnel</div>
       <div class="topbar-sep"></div>
       <div class="topbar-version">v{{ APP_VERSION if APP_VERSION else '0.1.0' }}</div>
+      <div class="topbar-sep"></div>
+      <!-- Bouton logout -->
+      <a href="/logout"
+         style="font-family:var(--font-mono);font-size:10px;color:var(--muted);
+                text-decoration:none;padding:4px 8px;border:1px solid var(--border);
+                border-radius:3px;transition:color .15s,border-color .15s"
+         onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--border-hover,#3a3a3e)'"
+         onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">
+        ⎋ Déconnexion
+      </a>
     </div>
   </header>
 
@@ -58,17 +79,30 @@
     <a class="nav-item {% if request.path == '/modules' %}active{% endif %}" href="/modules">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
       Modules
-      <span class="nav-badge">{{ MODULES  | length }}</span>
+      <span class="nav-badge">{{ MODULES | length }}</span>
     </a>
     <a class="nav-item {% if request.path == '/workflows' %}active{% endif %}" href="/workflows">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
       Workflows
-      <span class="nav-badge">{{ WORKFLOWS  | length }}</span>
+      <span class="nav-badge">{{ WORKFLOWS | length }}</span>
     </a>
     <a class="nav-item {% if request.path == '/resources' %}active{% endif %}" href="/resources">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
       Resources
     </a>
+
+    {% if is_admin %}
+    <div class="nav-section">Administration</div>
+    <a class="nav-item {% if request.path.startswith('/admin/users') %}active{% endif %}" href="/admin/users">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Utilisateurs
+    </a>
+    {% endif %}
   </nav>
 
   <!-- MAIN CONTENT -->
@@ -78,5 +112,7 @@
 </div>
 
 <script src="{{ url_for('static', filename='script.js') }}"></script>
+{# decrypt.js est chargé après script.js pour être disponible dans toutes les pages #}
+<script type="module" src="{{ url_for('static', filename='decrypt.js') }}"></script>
 </body>
 </html>

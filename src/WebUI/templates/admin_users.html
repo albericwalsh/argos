@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  /* ── Layout ── */
+  .users-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ── User card ── */
+  .user-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: border-color .15s;
+  }
+  .user-card:hover { border-color: var(--border-hover, #3a3a3e); }
+  .user-card.is-admin { border-color: rgba(0,229,160,.25); }
+
+  .user-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .user-avatar {
+    width: 36px; height: 36px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+    background: rgba(0,229,160,.1);
+    color: var(--accent);
+  }
+  .user-card.is-admin .user-avatar {
+    background: rgba(0,229,160,.18);
+  }
+
+  .user-info { flex: 1; min-width: 0; }
+  .user-name {
+    font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .user-id {
+    font-family: var(--font-mono);
+    font-size: 10px; color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .badge-admin {
+    font-family: var(--font-mono);
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(0,229,160,.12);
+    border: 1px solid rgba(0,229,160,.3);
+    color: var(--accent);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .user-header-right {
+    display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .perm-pills {
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .perm-pill {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .perm-pill.full  { background: rgba(0,229,160,.08); border-color: rgba(0,229,160,.2); color: var(--accent); }
+  .perm-pill.read  { background: rgba(167,139,250,.08); border-color: rgba(167,139,250,.2); color: #a78bfa; }
+  .perm-pill.write { background: rgba(245,166,35,.08); border-color: rgba(245,166,35,.2); color: #f5a623; }
+
+  .chevron {
+    color: var(--muted);
+    font-size: 12px;
+    transition: transform .2s;
+  }
+  .user-card.open .chevron { transform: rotate(180deg); }
+
+  /* ── Perms editor ── */
+  .user-card-body {
+    display: none;
+    border-top: 1px solid var(--border);
+    padding: 18px;
+  }
+  .user-card.open .user-card-body { display: block; }
+
+  .perms-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .perms-table th {
+    font-size: 9px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 6px 10px 10px;
+    font-weight: 400;
+  }
+  .perms-table td {
+    padding: 6px 10px;
+    border-top: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .perms-table tr:first-child td { border-top: none; }
+
+  .res-name {
+    color: var(--text);
+    font-weight: 600;
+    width: 110px;
+    white-space: nowrap;
+  }
+
+  /* ── Checkboxes ── */
+  .perm-checks {
+    display: flex; gap: 16px; flex-wrap: wrap;
+  }
+  .perm-check {
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer; color: var(--muted);
+    transition: color .12s;
+  }
+  .perm-check:hover { color: var(--text); }
+  .perm-check input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 14px; height: 14px;
+    cursor: pointer;
+  }
+  .perm-check.checked { color: var(--text); }
+
+  /* ── Actions ── */
+  .card-actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Status indicators ── */
+  .save-status {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+    min-height: 20px;
+  }
+  .save-status.ok    { color: var(--accent); }
+  .save-status.error { color: #ff4d4d; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 11px 16px;
+    font-family: var(--font-mono); font-size: 11px;
+    display: flex; gap: 8px; align-items: center;
+    z-index: 999;
+    transform: translateY(150%);
+    transition: transform .2s ease;
+  }
+  .toast.show { transform: none; }
+  .toast.success { border-color: var(--accent); }
+  .toast.error   { border-color: #ff4d4d; }
+  .toast-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .toast.success .toast-dot { background: var(--accent); }
+  .toast.error   .toast-dot { background: #ff4d4d; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    padding: 60px; text-align: center;
+    color: var(--muted); font-family: var(--font-mono); font-size: 12px;
+    border: 1px dashed var(--border); border-radius: 4px;
+  }
+
+  /* ── Confirm delete ── */
+  .delete-confirm {
+    display: none;
+    align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 11px; color: #ff4d4d;
+  }
+  .delete-confirm.visible { display: flex; }
+</style>
+
+
+<!-- Page header -->
+<div class="page-header">
+  <div>
+    <div class="page-title">Utilisateurs</div>
+    <div class="page-sub">{{ users | length }} compte{{ 's' if users | length != 1 }} enregistré{{ 's' if users | length != 1 }}</div>
+  </div>
+</div>
+
+
+{% if users %}
+<div class="users-grid">
+  {% for user in users %}
+  {% set is_admin = '*' in user.get('users_perm', []) or '*' in user.get('modules', []) %}
+  <div class="user-card {% if is_admin %}is-admin{% endif %}" id="card-{{ user.id }}">
+
+    <!-- Header (cliquable) -->
+    <div class="user-card-header" onclick="toggleCard({{ user.id }})">
+      <div class="user-avatar">{{ user.username[:2].upper() }}</div>
+      <div class="user-info">
+        <div class="user-name">
+          {{ user.username }}
+          {% if is_admin %}<span class="badge-admin">admin</span>{% endif %}
+        </div>
+        <div class="user-id">id: {{ user.id }}</div>
+      </div>
+
+      <!-- Résumé des permissions actives -->
+      <div class="perm-pills">
+        {% for res, field in perm_fields.items() %}
+          {% set perms = user.get(field, []) %}
+          {% if perms %}
+            {% if '*' in perms %}
+              <span class="perm-pill full">{{ res }}:*</span>
+            {% elif 'read' in perms and 'write' in perms %}
+              <span class="perm-pill write">{{ res }}:rw</span>
+            {% elif 'read' in perms %}
+              <span class="perm-pill read">{{ res }}:r</span>
+            {% elif 'write' in perms %}
+              <span class="perm-pill write">{{ res }}:w</span>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="user-header-right">
+        <span class="chevron">▾</span>
+      </div>
+    </div>
+
+    <!-- Body : éditeur de permissions -->
+    <div class="user-card-body">
+      <table class="perms-table">
+        <thead>
+          <tr>
+            <th>Ressource</th>
+            <th>Permissions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for res, available in all_perms.items() %}
+          {% set field = perm_fields[res] %}
+          {% set current = user.get(field, []) %}
+          <tr>
+            <td class="res-name">{{ res }}</td>
+            <td>
+              <div class="perm-checks">
+                {% for perm in available %}
+                <label class="perm-check {% if perm in current %}checked{% endif %}">
+                  <input type="checkbox"
+                         data-user="{{ user.id }}"
+                         data-res="{{ res }}"
+                         data-perm="{{ perm }}"
+                         {% if perm in current %}checked{% endif %}
+                         onchange="onPermChange({{ user.id }})">
+                  {{ perm }}
+                </label>
+                {% endfor %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Actions -->
+      <div class="card-actions-row">
+        <div class="save-status" id="status-{{ user.id }}"></div>
+
+        <div style="display:flex;align-items:center;gap:8px">
+          <!-- Confirmation suppression -->
+          <div class="delete-confirm" id="del-confirm-{{ user.id }}">
+            Supprimer {{ user.username }} ?
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
+                    onclick="cancelDelete({{ user.id }})">Annuler</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;color:#ff4d4d"
+                    onclick="confirmDelete({{ user.id }}, '{{ user.username }}')">Confirmer</button>
+          </div>
+
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;color:#ff4d4d"
+                  id="del-btn-{{ user.id }}"
+                  onclick="askDelete({{ user.id }})">
+            ✕ Supprimer
+          </button>
+
+          <button class="btn btn-primary" style="font-size:11px;padding:5px 14px"
+                  onclick="savePerms({{ user.id }})">
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">Aucun utilisateur trouvé.</div>
+{% endif %}
+
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="toast-dot"></span>
+  <span id="toast-msg"></span>
+</div>
+
+
+<script>
+// ── Toggle card ───────────────────────────────────────────────────────────────
+function toggleCard(id) {
+  const card = document.getElementById('card-' + id);
+  card.classList.toggle('open');
+}
+
+// ── Collect perms for a user ──────────────────────────────────────────────────
+function collectPerms(userId) {
+  const checkboxes = document.querySelectorAll(`input[data-user="${userId}"]`);
+  const perms = {};
+  checkboxes.forEach(cb => {
+    const res  = cb.dataset.res;
+    const perm = cb.dataset.perm;
+    if (!perms[res]) perms[res] = [];
+    if (cb.checked) perms[res].push(perm);
+  });
+  return perms;
+}
+
+function onPermChange(userId) {
+  // Logique mutuellement exclusive : si "*" coché → décoche les autres, et vice versa
+  const checkboxes = document.querySelectorAll(`input[data-user="${userId}"]`);
+  
+  // Groupe par ressource
+  const groups = {};
+  checkboxes.forEach(cb => {
+    if (!groups[cb.dataset.res]) groups[cb.dataset.res] = [];
+    groups[cb.dataset.res].push(cb);
+  });
+
+  Object.values(groups).forEach(cbs => {
+    const starCb    = cbs.find(c => c.dataset.perm === '*');
+    const othersCbs = cbs.filter(c => c.dataset.perm !== '*');
+    if (!starCb) return;
+
+    // Si * vient d'être coché → décoche les autres
+    if (starCb.checked) {
+      othersCbs.forEach(c => { c.checked = false; c.closest('label').classList.remove('checked'); });
+      starCb.closest('label').classList.add('checked');
+    } else {
+      // Si un autre vient d'être coché → décoche *
+      othersCbs.forEach(c => {
+        c.closest('label').classList.toggle('checked', c.checked);
+      });
+      starCb.closest('label').classList.remove('checked');
+    }
+  });
+
+  setStatus(userId, '');
+}
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+async function savePerms(userId) {
+  const perms = collectPerms(userId);
+  setStatus(userId, '…');
+
+  try {
+    const res  = await fetch(`/admin/users/${userId}/perms`, {
+      method:      'POST',
+      credentials: 'same-origin',
+      headers:     { 'Content-Type': 'application/json' },
+      body:        JSON.stringify(perms),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      setStatus(userId, data.error || 'Erreur', 'error');
+      showToast(data.error || 'Erreur lors de la sauvegarde', 'error');
+    } else {
+      setStatus(userId, '✓ Sauvegardé', 'ok');
+      showToast(`Permissions de ${data.username || 'l\'utilisateur'} mises à jour`, 'success');
+      // Met à jour les pills dans le header
+      updatePills(userId, perms);
+    }
+  } catch {
+    setStatus(userId, 'API inaccessible', 'error');
+    showToast('API inaccessible', 'error');
+  }
+}
+
+function setStatus(userId, msg, type = '') {
+  const el = document.getElementById('status-' + userId);
+  el.textContent = msg;
+  el.className   = 'save-status ' + type;
+}
+
+// ── Update pills in header ────────────────────────────────────────────────────
+function updatePills(userId, perms) {
+  const card = document.getElementById('card-' + userId);
+  const pillsContainer = card.querySelector('.perm-pills');
+  if (!pillsContainer) return;
+
+  pillsContainer.innerHTML = Object.entries(perms).map(([res, vals]) => {
+    if (!vals.length) return '';
+    if (vals.includes('*'))                    return `<span class="perm-pill full">${res}:*</span>`;
+    if (vals.includes('read') && vals.includes('write')) return `<span class="perm-pill write">${res}:rw</span>`;
+    if (vals.includes('read'))                 return `<span class="perm-pill read">${res}:r</span>`;
+    if (vals.includes('write'))                return `<span class="perm-pill write">${res}:w</span>`;
+    return '';
+  }).join('');
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+function askDelete(userId) {
+  document.getElementById('del-confirm-' + userId).classList.add('visible');
+  document.getElementById('del-btn-' + userId).style.display = 'none';
+}
+function cancelDelete(userId) {
+  document.getElementById('del-confirm-' + userId).classList.remove('visible');
+  document.getElementById('del-btn-' + userId).style.display = '';
+}
+async function confirmDelete(userId, username) {
+  try {
+    const res  = await fetch(`/admin/users/${userId}`, {
+      method: 'DELETE', credentials: 'same-origin',
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Erreur', 'error');
+
+    // Retire la carte du DOM
+    const card = document.getElementById('card-' + userId);
+    card.style.opacity = '0';
+    card.style.transition = 'opacity .2s';
+    setTimeout(() => card.remove(), 200);
+
+    showToast(`${username} supprimé`, 'success');
+
+    // Met à jour le sous-titre
+    const sub = document.querySelector('.page-sub');
+    if (sub) {
+      const n = document.querySelectorAll('.user-card').length;
+      sub.textContent = `${n} compte${n > 1 ? 's' : ''} enregistré${n > 1 ? 's' : ''}`;
+    }
+  } catch {
+    showToast('API inaccessible', 'error');
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let _tt;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(_tt);
+  _tt = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+
+{% endblock %}

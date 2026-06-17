@@ -1,0 +1,330 @@
+### ─── Variables globales ─────────────────────────────────────────────────────
+@base = http://localhost:5001
+@adminUser = admin
+@adminPass = admin123
+@aliceUser = alice
+@alicePass = securepass
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  AUTH
+# ══════════════════════════════════════════════════════════════════════════════
+
+### Login admin → capture tokenAdmin
+# @name loginAdmin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{adminUser}}",
+  "password": "{{adminPass}}"
+}
+
+### Login alice → capture tokenAlice
+# @name loginAlice
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{aliceUser}}",
+  "password": "{{alicePass}}"
+}
+
+### Login champs manquants → 400
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{adminUser}}"
+}
+
+### Login mauvais mot de passe → 401
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{adminUser}}",
+  "password": "mauvais-mdp"
+}
+
+### Login utilisateur inexistant → 401
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "fantome",
+  "password": "n-importe-quoi"
+}
+
+### Register nouvel utilisateur → 201
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "bob",
+  "password": "bobpassword"
+}
+
+### Register username déjà pris → 409
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "{{adminUser}}",
+  "password": "autrepass123"
+}
+
+### Register mot de passe trop court → 400
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "newuser",
+  "password": "abc"
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  /me  ET  /users
+# ══════════════════════════════════════════════════════════════════════════════
+
+### /me admin → 200
+GET {{base}}/me
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### /me alice → 200
+GET {{base}}/me
+Authorization: Bearer {{loginAlice.response.body.token}}
+
+### /me sans token → 401
+GET {{base}}/me
+
+### /me token invalide → 401
+GET {{base}}/me
+Authorization: Bearer token.invalide.ici
+
+### /me token mal formé (pas de "Bearer ") → 401
+GET {{base}}/me
+Authorization: {{loginAdmin.response.body.token}}
+
+### /users admin (users_perm: ["*"]) → 200
+GET {{base}}/users
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### /users alice (users_perm: []) → 403
+GET {{base}}/users
+Authorization: Bearer {{loginAlice.response.body.token}}
+
+### /users sans token → 401
+GET {{base}}/users
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MISSIONS — listing
+# ══════════════════════════════════════════════════════════════════════════════
+
+### Toutes les missions avec leurs fichiers (admin) → 200
+### { "alpha": [{name, original_name, size}], "beta": [...] }
+GET {{base}}/files/missions
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Toutes les missions (alice, missions_perm: ["read"]) → 200
+GET {{base}}/files/missions
+Authorization: Bearer {{loginAlice.response.body.token}}
+
+### Toutes les missions sans token → 401
+GET {{base}}/files/missions
+
+### Fichiers d'une mission spécifique (admin) → 200
+GET {{base}}/files/missions/alpha
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Mission inexistante → 404
+GET {{base}}/files/missions/nexistepas
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MISSIONS — GET fichier
+# ══════════════════════════════════════════════════════════════════════════════
+
+### Récupérer un fichier de mission (admin) → 200 { nonce, ciphertext, enc_key, original_name }
+GET {{base}}/files/missions/alpha/001.json.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Sans .enc dans l'URL (auto-ajout) → 200
+GET {{base}}/files/missions/alpha/001.json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Récupérer (alice, read autorisé) → 200
+GET {{base}}/files/missions/alpha/001.json.enc
+Authorization: Bearer {{loginAlice.response.body.token}}
+
+### Fichier inexistant dans mission existante → 404
+GET {{base}}/files/missions/alpha/nexistepas.json.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Fichier de mission sans token → 401
+GET {{base}}/files/missions/alpha/001.json.enc
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MISSIONS — PUT upload
+# ══════════════════════════════════════════════════════════════════════════════
+
+### Upload dans une mission existante (admin) → 201
+PUT {{base}}/files/missions/alpha/002.json.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{
+  "nonce":         "AAAAAAAAAAAAAAAA",
+  "ciphertext":    "AAAAAAAAAAAAAAAAAAAAAA==",
+  "original_name": "002.json"
+}
+
+### Créer une nouvelle mission via upload (admin) → 201
+PUT {{base}}/files/missions/nouvelle-mission/001.json.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{
+  "nonce":         "AAAAAAAAAAAAAAAA",
+  "ciphertext":    "AAAAAAAAAAAAAAAAAAAAAA==",
+  "original_name": "001.json"
+}
+
+### Upload alice (missions_perm: ["read"], pas write) → 403
+PUT {{base}}/files/missions/alpha/003.json.enc
+Authorization: Bearer {{loginAlice.response.body.token}}
+Content-Type: application/json
+
+{
+  "nonce":         "AAAAAAAAAAAAAAAA",
+  "ciphertext":    "AAAAAAAAAAAAAAAAAAAAAA==",
+  "original_name": "003.json"
+}
+
+### Upload body incomplet → 400
+PUT {{base}}/files/missions/alpha/incomplet.json.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{
+  "nonce":         "AAAAAAAAAAAAAAAA",
+  "original_name": "incomplet.json"
+}
+
+### Upload sans token → 401
+PUT {{base}}/files/missions/alpha/unauth.json.enc
+Content-Type: application/json
+
+{
+  "nonce":         "AAAAAAAAAAAAAAAA",
+  "ciphertext":    "AAAAAAAAAAAAAAAAAAAAAA==",
+  "original_name": "unauth.json"
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  REPORTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+### Lister reports (admin) → 200
+GET {{base}}/files/reports
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Lister reports (alice, rapports_perm: ["read"]) → 200
+GET {{base}}/files/reports
+Authorization: Bearer {{loginAlice.response.body.token}}
+
+### Lister reports sans token → 401
+GET {{base}}/files/reports
+
+### Récupérer un PDF (admin) → 200
+GET {{base}}/files/reports/rapport_q1.pdf.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Récupérer un PDF (alice) → 200
+GET {{base}}/files/reports/rapport_q1.pdf.enc
+Authorization: Bearer {{loginAlice.response.body.token}}
+
+### Report inexistant → 404
+GET {{base}}/files/reports/nexistepas.pdf.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Upload report (admin) → 201
+PUT {{base}}/files/reports/rapport_q2.pdf.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{
+  "nonce":         "AAAAAAAAAAAAAAAA",
+  "ciphertext":    "AAAAAAAAAAAAAAAAAAAAAA==",
+  "original_name": "rapport_q2.pdf"
+}
+
+### Upload report alice (rapports_perm: ["read"], pas write) → 403
+PUT {{base}}/files/reports/rapport_q2.pdf.enc
+Authorization: Bearer {{loginAlice.response.body.token}}
+Content-Type: application/json
+
+{
+  "nonce":         "AAAAAAAAAAAAAAAA",
+  "ciphertext":    "AAAAAAAAAAAAAAAAAAAAAA==",
+  "original_name": "rapport_q2.pdf"
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  WORKFLOWS
+# ══════════════════════════════════════════════════════════════════════════════
+
+### Lister workflows (admin) → 200
+GET {{base}}/files/workflows
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Lister workflows (alice, worklows_perm: ["read"]) → 200
+GET {{base}}/files/workflows
+Authorization: Bearer {{loginAlice.response.body.token}}
+
+### Lister workflows sans token → 401
+GET {{base}}/files/workflows
+
+### Récupérer un HTML (admin) → 200
+GET {{base}}/files/workflows/onboarding.html.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Récupérer un HTML (alice) → 200
+GET {{base}}/files/workflows/onboarding.html.enc
+Authorization: Bearer {{loginAlice.response.body.token}}
+
+### Workflow inexistant → 404
+GET {{base}}/files/workflows/nexistepas.html.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Upload workflow (admin) → 201
+PUT {{base}}/files/workflows/offboarding.html.enc
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{
+  "nonce":         "AAAAAAAAAAAAAAAA",
+  "ciphertext":    "AAAAAAAAAAAAAAAAAAAAAA==",
+  "original_name": "offboarding.html"
+}
+
+### Upload workflow alice (worklows_perm: ["read"], pas write) → 403
+PUT {{base}}/files/workflows/offboarding.html.enc
+Authorization: Bearer {{loginAlice.response.body.token}}
+Content-Type: application/json
+
+{
+  "nonce":         "AAAAAAAAAAAAAAAA",
+  "ciphertext":    "AAAAAAAAAAAAAAAAAAAAAA==",
+  "original_name": "offboarding.html"
+}
+
+### Catégorie inexistante → 404
+GET {{base}}/files/inexistant
+Authorization: Bearer {{loginAdmin.response.body.token}}

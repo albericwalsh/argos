@@ -1,0 +1,222 @@
+{#
+  render.html — Argos module renderer : sqlmap
+  Context variables injected by report_engine:
+    step       : dict
+    step_id    : str
+    step_index : int
+    module     : dict
+#}
+{% set results = (step.get("output") or []) | tojson | fromjson %}
+{% set n_vuln    = results | selectattr("vulnerable", "equalto", true)  | list | length %}
+{% set n_url     = results | selectattr("source", "equalto", "url")        | list | length %}
+{% set n_db      = results | selectattr("source", "equalto", "db_service") | list | length %}
+{% set all_dbs   = [] %}
+{% for r in results %}{% if r.get("vulnerable") %}{% for db in r.get("databases",[]) %}{% if db not in all_dbs %}{% set _ = all_dbs.append(db) %}{% endif %}{% endfor %}{% endif %}{% endfor %}
+
+<div class="mod-section sqm-section">
+  <div class="mod-header">
+    <div class="mod-header-left">
+      <span class="mod-icon">⛁</span>
+      <div>
+        <div class="mod-name">{{ module.name }}</div>
+        <div class="mod-meta">{{ module.category }} · {{ step_id }}</div>
+      </div>
+    </div>
+    <div class="sqm-counters">
+      <div class="sqm-counter {% if n_vuln > 0 %}sqc-vuln{% else %}sqc-safe{% endif %}">
+        <span class="sqc-num">{{ n_vuln }}</span>
+        <span class="sqc-lbl">Vulnérable{{ 's' if n_vuln > 1 }}</span>
+      </div>
+      <div class="sqm-counter sqc-url">
+        <span class="sqc-num">{{ n_url }}</span>
+        <span class="sqc-lbl">URLs testées</span>
+      </div>
+      <div class="sqm-counter sqc-db">
+        <span class="sqc-num">{{ n_db }}</span>
+        <span class="sqc-lbl">Services DB</span>
+      </div>
+      <div class="sqm-counter sqc-dbs">
+        <span class="sqc-num">{{ all_dbs | length }}</span>
+        <span class="sqc-lbl">Bases trouvées</span>
+      </div>
+    </div>
+  </div>
+
+  {% if n_vuln > 0 %}
+  <div class="sqm-alert">
+    <span class="sqm-alert-icon">⚠</span>
+    <div>
+      <strong>{{ n_vuln }} cible(s) vulnérable(s) à l'injection SQL</strong>
+      {% if all_dbs %}
+      <div style="margin-top:4px;font-size:10px">
+        Bases exposées :
+        {% for db in all_dbs %}<span class="sqm-db-pill">{{ db }}</span>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if results %}
+  <div class="table-wrap">
+    <table class="mod-table sqm-table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>URL / Service</th>
+          <th>Statut</th>
+          <th>Injections</th>
+          <th>Bases de données</th>
+          <th>Tables</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+        {% set has_output = r.get("output") and r["output"] | length > 0 %}
+        <tr class="sqm-row {% if r.get('vulnerable') %}sqm-vuln-row{% endif %}"
+            {% if has_output %}onclick="toggleOut('{{ step_id }}-{{ loop.index }}')" style="cursor:pointer"{% endif %}>
+          <td>
+            <span class="sqm-source sqm-src-{{ r.get('source','') }}">
+              {{ '🌐 URL' if r.get('source') == 'url' else '🗄 DB' }}
+            </span>
+          </td>
+          <td class="sqm-url" title="{{ r.get('target_url','') }}">{{ r.get("target_url", "—") }}</td>
+          <td>
+            {% if r.get("vulnerable") %}
+            <span class="sqm-status sqm-yes">✓ Vulnérable</span>
+            {% else %}
+            <span class="sqm-status sqm-no">✗ Sûr</span>
+            {% endif %}
+          </td>
+          <td>
+            {% for inj in r.get("injections", []) %}
+            <span class="sqm-inj-pill">{{ inj }}</span>
+            {% else %}<span class="cell-muted">—</span>{% endfor %}
+          </td>
+          <td>
+            {% for db in r.get("databases", []) %}
+            <span class="sqm-db-pill">{{ db }}</span>
+            {% else %}<span class="cell-muted">—</span>{% endfor %}
+          </td>
+          <td>
+            {% set tables = r.get("tables", []) %}
+            {% if tables %}
+            <span class="cell-muted" style="font-size:10px">{{ tables | length }} table{{ 's' if tables|length > 1 }}</span>
+            {% else %}<span class="cell-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if has_output %}
+            <span class="sqm-chevron" id="sqchev-{{ step_id }}-{{ loop.index }}">▾</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% if has_output %}
+        <tr class="sqm-out-row" id="sqout-{{ step_id }}-{{ loop.index }}" style="display:none">
+          <td colspan="7">
+            <pre class="sqm-console">{{ r["output"] }}</pre>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="mod-empty">Aucun résultat d'analyse SQL.</div>
+  {% endif %}
+</div>
+
+<style>
+  .sqm-section .mod-header {
+    border-left: 3px solid {% if n_vuln > 0 %}#ff2020{% else %}var(--accent){% endif %};
+  }
+
+  /* Compteurs */
+  .sqm-counters { display: flex; gap: 8px; }
+  .sqm-counter  {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 6px 12px; border-radius: 4px; min-width: 52px;
+  }
+  .sqc-vuln { background: rgba(255,32,32,.12);  border: 1px solid rgba(255,32,32,.3); }
+  .sqc-safe { background: rgba(0,229,160,.08);  border: 1px solid rgba(0,229,160,.2); }
+  .sqc-url  { background: rgba(245,166,35,.1);  border: 1px solid rgba(245,166,35,.25); }
+  .sqc-db   { background: rgba(155,155,255,.1); border: 1px solid rgba(155,155,255,.25); }
+  .sqc-dbs  { background: rgba(77,200,255,.08); border: 1px solid rgba(77,200,255,.2); }
+  .sqc-num  { font-family: var(--font-mono); font-size: 18px; font-weight: 700; line-height: 1; }
+  .sqc-lbl  { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+  .sqc-vuln .sqc-num { color: #ff2020; }
+  .sqc-safe .sqc-num { color: var(--accent); }
+  .sqc-url  .sqc-num { color: #f5a623; }
+  .sqc-db   .sqc-num { color: #9b9bff; }
+  .sqc-dbs  .sqc-num { color: #4dc8ff; }
+
+  /* Alerte */
+  .sqm-alert {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 16px;
+    background: rgba(255,32,32,.07);
+    border: 1px solid rgba(255,32,32,.25);
+    border-top: none;
+    font-size: 12px; color: #ff6060; font-family: var(--font-mono);
+  }
+  .sqm-alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Table */
+  .sqm-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .sqm-table th {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 12px;
+    text-align: left; background: var(--surface2, #1c1c20);
+    border-bottom: 1px solid var(--border);
+  }
+  .sqm-table td { padding: 9px 12px; border-bottom: 1px solid rgba(42,42,46,.5); vertical-align: middle; }
+  .sqm-table tr:last-child td { border-bottom: none; }
+  .sqm-vuln-row td { background: rgba(255,32,32,.03); }
+  .sqm-row:hover td { background: rgba(255,255,255,.015); }
+  .sqm-vuln-row:hover td { background: rgba(255,32,32,.05); }
+
+  .sqm-source {
+    font-family: var(--font-mono); font-size: 10px;
+    padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+  }
+  .sqm-src-url { background: rgba(245,166,35,.1); color: #f5a623; border: 1px solid rgba(245,166,35,.25); }
+  .sqm-src-db_service { background: rgba(155,155,255,.1); color: #9b9bff; border: 1px solid rgba(155,155,255,.25); }
+
+  .sqm-url { font-family: var(--font-mono); font-size: 10px; color: var(--text); max-width: 280px; word-break: break-all; }
+
+  .sqm-status { font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+  .sqm-yes { background: rgba(255,32,32,.15); color: #ff2020; border: 1px solid rgba(255,32,32,.3); }
+  .sqm-no  { background: rgba(0,229,160,.08); color: var(--accent); border: 1px solid rgba(0,229,160,.2); }
+
+  .sqm-inj-pill, .sqm-db-pill {
+    display: inline-block; font-family: var(--font-mono); font-size: 9px;
+    padding: 1px 5px; border-radius: 3px; margin: 1px 2px;
+  }
+  .sqm-inj-pill { background: rgba(255,77,77,.1); color: #ff4d4d; border: 1px solid rgba(255,77,77,.25); }
+  .sqm-db-pill  { background: rgba(77,200,255,.1); color: #4dc8ff; border: 1px solid rgba(77,200,255,.25); }
+
+  .sqm-chevron { color: var(--accent); font-size: 11px; transition: transform .15s; display: inline-block; }
+  .sqm-chevron.open { transform: rotate(180deg); }
+  .sqm-out-row td { padding: 0; }
+  .sqm-console {
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    background: #060608; padding: 12px 16px;
+    white-space: pre-wrap; word-break: break-all; margin: 0;
+    line-height: 1.6; border-top: 1px solid var(--border);
+    max-height: 260px; overflow-y: auto;
+  }
+
+  .cell-muted { color: var(--muted); font-size: 11px; }
+</style>
+
+<script>
+function toggleOut(key) {
+  const row  = document.getElementById('sqout-'  + key);
+  const chev = document.getElementById('sqchev-' + key);
+  if (!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  if (chev) chev.classList.toggle('open', !open);
+}
+</script>

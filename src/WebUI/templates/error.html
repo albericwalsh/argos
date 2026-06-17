@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .error-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 18px;
+    text-align: center;
+  }
+  .error-code {
+    font-family: var(--font-mono);
+    font-size: 64px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--border-hover, #3a3a3e);
+    letter-spacing: -.02em;
+  }
+  .error-icon { font-size: 40px; opacity: .25; }
+  .error-title {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .error-message {
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 420px;
+    line-height: 1.7;
+  }
+  .error-detail {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+    max-width: 480px;
+    word-break: break-word;
+  }
+  .error-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+  }
+</style>
+
+<div class="error-wrap">
+  {% set icons = {401: '🔑', 403: '🔒', 404: '🧭', 500: '⚠️', 503: '🔌'} %}
+  {% set titles = {
+    401: 'Authentification requise',
+    403: 'Accès refusé',
+    404: 'Page introuvable',
+    500: 'Erreur interne',
+    503: 'Service indisponible'
+  } %}
+  {% set default_messages = {
+    401: 'Votre session a expiré ou vous n\'êtes pas connecté. Merci de vous reconnecter.',
+    403: 'Vous n\'avez pas la permission nécessaire pour accéder à cette ressource.',
+    404: 'La page ou la ressource demandée n\'existe pas.',
+    500: 'Une erreur inattendue est survenue côté serveur.',
+    503: 'Le service est temporairement indisponible. Vérifiez que l\'API est démarrée.'
+  } %}
+
+  <div class="error-icon">{{ icons.get(code, '❓') }}</div>
+  <div class="error-code">{{ code }}</div>
+  <div class="error-title">{{ titles.get(code, 'Erreur') }}</div>
+  <div class="error-message">{{ message or default_messages.get(code, 'Une erreur est survenue.') }}</div>
+
+  {% if detail %}
+  <div class="error-detail">{{ detail }}</div>
+  {% endif %}
+
+  <div class="error-actions">
+    {% if code == 401 %}
+    <a href="/login" class="btn btn-primary">Se reconnecter</a>
+    {% else %}
+    <a href="/" class="btn btn-ghost">← Retour au dashboard</a>
+    {% if code == 503 %}
+    <button class="btn btn-primary" onclick="location.reload()">Réessayer</button>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

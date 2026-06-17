@@ -10,40 +10,26 @@
 {% set output = step.get("output") %}
 {% set error  = step.get("error") %}
 
-<div class="mod-section generic-section">
+<div class="mod-section">
   <div class="mod-header">
     <div class="mod-header-left">
-      <span class="mod-icon">⬡</span>
+      <span class="mod-icon">▸</span>
       <div>
-        <div class="mod-name">{{ module.name if module else step_id }}</div>
-        <div class="mod-meta">{{ module.category if module else "Module" }} · {{ step_id }}</div>
+        <div class="mod-name">{{ module.name if module and module.name else step_id }}</div>
+        <div class="mod-meta">{{ module.category if module and module.category else 'module' }}</div>
       </div>
     </div>
-    {% if error %}
-    <span class="step-status-badge badge-error">✕ Erreur</span>
-    {% else %}
-    <span class="step-status-badge badge-ok">✓ Succès</span>
-    {% endif %}
   </div>
 
-  <div class="generic-body">
-    {% if error %}
-    <div class="generic-error">
-      <span class="generic-error-label">Erreur</span>
-      <pre class="generic-pre">{{ error }}</pre>
-    </div>
-    {% elif output is none %}
-    <div class="generic-null">Pas de sortie pour ce step.</div>
-    {% elif output is string %}
-    <pre class="generic-pre">{{ output }}</pre>
-    {% elif output is mapping %}
-    <pre class="generic-pre">{{ output | tojson(indent=2) }}</pre>
-    {% elif output is iterable %}
-    <pre class="generic-pre">{{ output | tojson(indent=2) }}</pre>
-    {% else %}
-    <pre class="generic-pre">{{ output }}</pre>
-    {% endif %}
+  {% if step.error %}
+  <div class="mod-empty" style="color:#ff4d4d">Erreur : {{ step.error }}</div>
+  {% elif step.output is not none %}
+  <div class="table-wrap">
+    <pre style="background:var(--surface);padding:16px;margin:0;overflow-x:auto;font-family:var(--font-mono);font-size:11px;color:var(--text)">{{ step.output | tojson(indent=2) }}</pre>
   </div>
+  {% else %}
+  <div class="mod-empty">Pas de sortie pour cette étape.</div>
+  {% endif %}
 </div>
 
 <style>
