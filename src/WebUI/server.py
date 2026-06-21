@@ -197,15 +197,50 @@ def workflows_save():
     return jsonify({'ok': True, 'id': safe_name.replace('.json', '')}), 200
 
 
+@app.route('/workflows/sync', methods=['POST'])
+@login_required
+def workflows_sync():
+    """
+    Appelé par builder.html juste APRÈS un PUT chiffré réussi vers
+    /proxy/files/workflows/<filename> (via ArgosDecrypt.saveWorkflow()).
+
+    Le navigateur a déjà le JSON en clair du workflow à ce moment précis
+    (avant chiffrement) ; il le transmet ici pour que le serveur Python
+    mette à jour WORKFLOWS_REGISTERY en mémoire SANS avoir besoin de
+    redéchiffrer quoi que ce soit — ce n'est pas une fuite de sécurité
+    supplémentaire : c'est le même clair que celui qui vient d'être
+    chiffré et envoyé une ligne plus haut côté JS, simplement dupliqué
+    vers cet endpoint pour la synchro du registre serveur.
+
+    Body JSON : { "workflow": {...}, "filename": "<id>.json" }
+    """
+    data     = request.get_json(force=True) or {}
+    wf_dict  = data.get('workflow')
+    filename = data.get('filename', '')
+
+    if not wf_dict or not wf_dict.get('id'):
+        return jsonify({'ok': False, 'error': 'workflow (avec id) requis'}), 400
+
+    from src.core.workflow_runner import upsert_workflow_in_registry
+    try:
+        wf = upsert_workflow_in_registry(wf_dict, source_name=filename)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+    return jsonify({'ok': True, 'id': wf.id}), 200
+
+
 @app.route('/workflows/delete/<workflow_id>', methods=['DELETE'])
 @login_required
 def workflows_delete(workflow_id):
     """
-    Relais pur vers l'API. Nécessite que l'API expose un DELETE équivalent
-    (à ajouter côté files.py si pas encore présent) — voir note ci-dessous.
+    Relais vers l'API pour suppression du fichier chiffré, PUIS retire
+    également le workflow de WORKFLOWS_REGISTERY (mémoire serveur) pour
+    qu'il disparaisse immédiatement de /run/<id> sans reconnexion.
     """
     import requests
     from src.WebUI.auth import API_BASE
+    from src.core.workflow_runner import remove_workflow_from_registry
 
     safe_id = os.path.basename(workflow_id)
     try:
@@ -220,6 +255,7 @@ def workflows_delete(workflow_id):
     if resp.status_code not in (200, 204):
         return jsonify({'ok': False, 'error': resp.json().get('error', 'Erreur API')}), resp.status_code
 
+    remove_workflow_from_registry(safe_id)
     return jsonify({'ok': True}), 200
 
 
@@ -246,7 +282,7 @@ def modules():
 def run_workflow(workflow_id):
     workflow = next((w for w in WORKFLOWS_REGISTERY if w.id == workflow_id), None)
     if not workflow:
-        return _render_error(404, f"Workflow '{workflow_id}' introuvable")
+        return "Workflow not found", 404
 
     if request.method == 'POST':
         from src.WebUI.auth import API_BASE

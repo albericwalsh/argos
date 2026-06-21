@@ -4,7 +4,7 @@ Argos — Routes pour le module Reports.
 
 SÉCURITÉ — réécriture complète :
   - Plus aucune lecture/écriture sur REPORTS_DIR en clair.
-  - list_reports() et generate_report() viennent de src.core.report_engine,
+  - list_reports() et generate_report() viennent de src.core.report,
     qui passe systématiquement par l'API chiffrée avec owner_id.
   - L'aperçu HTML et le téléchargement PDF déchiffrent en mémoire avec la
     clé du user courant (g.enc_key) au moment de la requête, sans jamais
@@ -104,15 +104,25 @@ def register_reports_routes(app):
     @login_required
     def reports_generate():
         """
-        POST /reports/generate   Body JSON : { "mission_id": "#MSN-XXXXXXXX" }
+        POST /reports/generate
+        Body JSON : { "mission_id": "#MSN-XXXXXXXX", "mission_folder": "..." (optionnel) }
 
-        Récupère la mission (en mémoire si en cours de session, sinon
-        déchiffrée via l'API), génère HTML+PDF, et les chiffre avec la
-        clé du user courant avant envoi à l'API. owner_id du rapport =
-        user courant (celui qui a demandé la génération).
+        Récupère la mission :
+          1. en mémoire (MISSIONS_REGISTERY) si elle vient d'être lancée
+             dans cette session — chemin rapide, pas d'appel réseau ;
+          2. sinon, déchiffrée via l'API. mission_folder, transmis par le
+             frontend (connu via _mission_folder attaché lors du listing
+             dans missions.html/reports.html), permet d'aller chercher
+             directement le bon fichier sans scanner tout l'historique.
+             Sans mission_folder, on retombe sur un scan complet des
+             dossiers visibles par le user courant.
+
+        Génère HTML+PDF, chiffrés avec la clé du user courant avant envoi
+        à l'API. owner_id du rapport = user courant (celui qui demande).
         """
-        data       = request.get_json(force=True) or {}
-        mission_id = data.get("mission_id", "").strip()
+        data            = request.get_json(force=True) or {}
+        mission_id      = data.get("mission_id", "").strip()
+        mission_folder  = data.get("mission_folder", "").strip() or None
         if not mission_id:
             abort(400, description="mission_id manquant")
 
@@ -130,12 +140,10 @@ def register_reports_routes(app):
                 "date_completed": mission_obj.date_completed.isoformat() if isinstance(mission_obj.date_completed, _dt) else mission_obj.date_completed,
             }
         else:
-            # Mission pas en mémoire : on la récupère déchiffrée via l'API.
-            # On ne sait pas a priori dans quel sous-dossier mission elle se
-            # trouve ; on demande donc au front de fournir mission_folder
-            # si jamais cette situation se présente (hors scope ici, le
-            # flux normal passe par une mission encore en mémoire de session).
-            abort(404, description=f"Mission {mission_id} introuvable dans la session courante")
+            from src.WebUI.mission_detail import _find_mission_via_api
+            mission_dict = _find_mission_via_api(mission_id, folder_hint=mission_folder)
+            if mission_dict is None:
+                abort(404, description=f"Mission {mission_id} introuvable ou inaccessible")
 
         try:
             info = generate_report(

@@ -1,10 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
-
 <!-- ══════════════ PAGE : RAPPORTS ══════════════ -->
 
 <style>
-  /* ── Report card ── */
   .report-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -30,7 +28,6 @@
   }
   .report-card-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
-  /* ── Modal ── */
   .modal-overlay {
     display: none;
     position: fixed; inset: 0;
@@ -93,7 +90,6 @@
     gap: 8px;
   }
 
-  /* ── Mission select list ── */
   .mission-list { display: flex; flex-direction: column; gap: 6px; }
   .mission-option {
     display: flex;
@@ -122,9 +118,8 @@
     margin-top: 2px;
   }
 
-  /* ── Toast ── */
   .toast {
-    position: fixed; bottom: 0; right: 24px;
+    position: fixed; bottom: 24px; right: 24px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -145,7 +140,6 @@
   .toast.success .toast-dot { background: var(--accent); }
   .toast.error   .toast-dot { background: #ff4d4d; }
 
-  /* ── Preview iframe overlay ── */
   .preview-overlay {
     display: none;
     position: fixed; inset: 0;
@@ -166,7 +160,6 @@
   .preview-bar-title { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
   .preview-iframe { flex: 1; border: none; width: 100%; }
 
-  /* ── Empty state ── */
   .empty-state {
     padding: 60px;
     text-align: center;
@@ -178,7 +171,6 @@
   }
   .empty-state-icon { font-size: 32px; margin-bottom: 12px; opacity: .4; }
 
-  /* ── Spinner ── */
   .spinner {
     width: 14px; height: 14px;
     border: 2px solid rgba(0,229,160,.2);
@@ -191,55 +183,31 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .reports-list { display: flex; flex-direction: column; gap: 6px; }
+  .mini-spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid rgba(0,229,160,.2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite; margin-right: 6px;
+    vertical-align: middle;
+  }
 </style>
 
 <!-- Page header -->
 <div class="page-header">
   <div>
     <div class="page-title">Rapports</div>
-    <div class="page-sub">{{ reports|length }} rapport{{ 's' if reports|length != 1 }} généré{{ 's' if reports|length != 1 }}</div>
+    <div class="page-sub" id="reports-count">Chargement…</div>
   </div>
   <button class="btn btn-primary" onclick="openModal()">
     + Générer un rapport
   </button>
 </div>
 
-<!-- Reports list -->
-{% if reports %}
-<div class="reports-list">
-  {% for r in reports %}
-  <div class="report-card" id="card-{{ r.id }}">
-    <div>
-      <div class="report-card-id">{{ r.id }}</div>
-      <div class="report-card-meta">Généré le {{ r.generated }}</div>
-    </div>
-    <div class="report-card-actions">
-      {% if r.html_file %}
-      <button class="btn btn-ghost" style="font-size:11px"
-              onclick="openPreview('{{ r.id }}')">
-        ⤢ Aperçu
-      </button>
-      {% endif %}
-      {% if r.pdf_file %}
-      <a class="btn btn-ghost" style="font-size:11px"
-         href="/reports/download/{{ r.id }}">
-        ↓ PDF
-      </a>
-      {% endif %}
-      <button class="btn btn-ghost" style="font-size:11px;color:#ff4d4d"
-              onclick="deleteReport('{{ r.id }}')">
-        ✕
-      </button>
-    </div>
+<!-- Reports list (hydraté en JS) -->
+<div id="reports-container">
+  <div class="empty-state">
+    <span class="mini-spinner"></span> Déchiffrement des rapports…
   </div>
-  {% endfor %}
 </div>
-{% else %}
-<div class="empty-state">
-  <div class="empty-state-icon">📄</div>
-  Aucun rapport généré — cliquez sur « Générer un rapport » pour commencer.
-</div>
-{% endif %}
 
 
 <!-- ══ MODAL : Sélection de mission ══ -->
@@ -254,13 +222,14 @@
       <div class="mission-list" id="mission-list">
         {% for m in missions %}
         <label class="mission-option" onclick="selectMission(this)">
-          <input type="radio" name="mission_select" value="{{ m.id }}" style="display:none">
+          <input type="radio" name="mission_select" value="{{ m.id }}"
+                 data-folder="{{ m.get('_mission_folder', '') }}" style="display:none">
           <div style="flex:1">
             <div class="mission-option-id">{{ m.id }}</div>
             <div class="mission-option-name">{{ m.name or m.workflow }}</div>
             <div class="mission-option-meta">
               Workflow: {{ m.workflow }}
-              {% if m.inputs and m.inputs.target %}· Cible: {{ m.inputs.target }}{% endif %}
+              {% if m.inputs and m.inputs.values() | list %}· Cible: {{ m.inputs.values() | list | first }}{% endif %}
             </div>
           </div>
           <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent)">completed ✓</span>
@@ -269,7 +238,9 @@
       </div>
       {% else %}
       <div style="padding:32px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px">
-        Aucune mission complétée disponible.
+        Aucune mission complétée disponible dans cette session.<br>
+        <span style="font-size:10px">Astuce : depuis la page Missions, le bouton « ⎙ Rapport »
+        fonctionne aussi pour l'historique complet.</span>
       </div>
       {% endif %}
     </div>
@@ -289,11 +260,11 @@
   <div class="preview-bar">
     <span class="preview-bar-title" id="preview-title">Aperçu rapport</span>
     <div style="display:flex;gap:8px">
-      <a class="btn btn-ghost" style="font-size:11px" id="preview-pdf-link">↓ PDF</a>
+      <button class="btn btn-ghost" style="font-size:11px" id="preview-pdf-btn">↓ PDF</button>
       <button class="btn btn-ghost" style="font-size:11px" onclick="closePreview()">✕ Fermer</button>
     </div>
   </div>
-  <iframe class="preview-iframe" id="preview-iframe" src="about:blank"></iframe>
+  <iframe class="preview-iframe" id="preview-iframe" src="about:blank" sandbox="allow-same-origin"></iframe>
 </div>
 
 
@@ -305,7 +276,72 @@
 
 
 <script>
-// ── Modal ─────────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// CHARGEMENT & RENDU DE LA LISTE (hydratation JS — aucun rapport
+// n'est jamais transmis en clair par le serveur Jinja)
+// ════════════════════════════════════════════════════════════════
+
+let CURRENT_REPORT_ID = null;
+
+function renderReportCard(r) {
+  return `
+    <div class="report-card" id="card-${r.id}">
+      <div>
+        <div class="report-card-id">${r.id}</div>
+        <div class="report-card-meta">Rapport chiffré</div>
+      </div>
+      <div class="report-card-actions">
+        ${r.html_file ? `
+        <button class="btn btn-ghost" style="font-size:11px" onclick="openPreview('${r.id}')">
+          ⤢ Aperçu
+        </button>` : ''}
+        ${r.pdf_file ? `
+        <button class="btn btn-ghost" style="font-size:11px" onclick="downloadReport('${r.id}')">
+          ↓ PDF
+        </button>` : ''}
+        <button class="btn btn-ghost" style="font-size:11px;color:#ff4d4d" onclick="deleteReport('${r.id}')">
+          ✕
+        </button>
+      </div>
+    </div>`;
+}
+
+async function loadReports() {
+  const container = document.getElementById('reports-container');
+
+  let reports = [];
+  try {
+    // report_engine.list_reports() côté API retourne déjà la forme
+    // [{ id, html_file, pdf_file }] groupée par mission_id — pas de
+    // déchiffrement de contenu nécessaire ici, juste les métadonnées.
+    reports = await ArgosDecrypt.listReportsGrouped();
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state" style="color:#ff4d4d">
+      Erreur de chargement : ${e.message}</div>`;
+    document.getElementById('reports-count').textContent = 'Erreur';
+    return;
+  }
+
+  document.getElementById('reports-count').textContent =
+    `${reports.length} rapport${reports.length !== 1 ? 's' : ''} généré${reports.length !== 1 ? 's' : ''}`;
+
+  if (reports.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">📄</div>
+      Aucun rapport généré — cliquez sur « Générer un rapport » pour commencer.
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="reports-list">${reports.map(renderReportCard).join('')}</div>`;
+}
+
+document.addEventListener('DOMContentLoaded', loadReports);
+
+
+// ════════════════════════════════════════════════════════════════
+// MODAL — sélection de mission
+// ════════════════════════════════════════════════════════════════
 function openModal() {
   document.getElementById('modal-overlay').classList.add('open');
 }
@@ -323,7 +359,9 @@ function selectMission(el) {
   document.getElementById('btn-generate').disabled = false;
 }
 
-// ── Generate ──────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// GÉNÉRATION
+// ════════════════════════════════════════════════════════════════
 async function generateReport() {
   const radio = document.querySelector('input[name="mission_select"]:checked');
   if (!radio) return;
@@ -334,20 +372,22 @@ async function generateReport() {
   spinner.classList.add('active');
 
   try {
-    const res  = await fetch('/reports/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mission_id: radio.value })
+    const res = await fetch('/reports/generate', {
+      method:      'POST',
+      credentials: 'same-origin',
+      headers:     { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mission_id:     radio.value,
+        mission_folder: radio.dataset.folder || undefined,
+      }),
     });
     const data = await res.json();
 
-    if (!res.ok || !data.ok) throw new Error(data.description || 'Erreur serveur');
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Erreur serveur');
 
     closeModal();
     showToast('Rapport généré avec succès', 'success');
-
-    // Inject new card without page reload
-    injectCard(data.report);
+    loadReports();
   } catch (err) {
     showToast(err.message || 'Erreur lors de la génération', 'error');
   } finally {
@@ -356,91 +396,70 @@ async function generateReport() {
   }
 }
 
-function injectCard(r) {
-  // Remove empty state if present
-  const empty = document.querySelector('.empty-state');
-  if (empty) empty.remove();
+// ════════════════════════════════════════════════════════════════
+// APERÇU — déchiffré en mémoire navigateur, jamais écrit sur disque
+// ════════════════════════════════════════════════════════════════
+async function openPreview(id) {
+  CURRENT_REPORT_ID = id;
+  const iframe = document.getElementById('preview-iframe');
+  const overlay = document.getElementById('preview-overlay');
 
-  // Ensure list container exists
-  let list = document.querySelector('.reports-list');
-  if (!list) {
-    list = document.createElement('div');
-    list.className = 'reports-list';
-    document.querySelector('.page-header').insertAdjacentElement('afterend', list);
-  }
-
-  // Remove existing card with same id
-  const existing = document.getElementById('card-' + r.id);
-  if (existing) existing.remove();
-
-  const card = document.createElement('div');
-  card.className = 'report-card';
-  card.id = 'card-' + r.id;
-  card.innerHTML = `
-    <div>
-      <div class="report-card-id">${r.id}</div>
-      <div class="report-card-meta">Généré le ${r.generated}</div>
-    </div>
-    <div class="report-card-actions">
-      ${r.html_file ? `<button class="btn btn-ghost" style="font-size:11px" onclick="openPreview('${r.id}')">⤢ Aperçu</button>` : ''}
-      ${r.pdf_file  ? `<a class="btn btn-ghost" style="font-size:11px" href="/reports/download/${r.id}">↓ PDF</a>` : ''}
-      <button class="btn btn-ghost" style="font-size:11px;color:#ff4d4d" onclick="deleteReport('${r.id}')">✕</button>
-    </div>
-  `;
-  list.prepend(card);
-
-  // Update subtitle count
-  const sub = document.querySelector('.page-sub');
-  if (sub) {
-    const n = document.querySelectorAll('.report-card').length;
-    sub.textContent = `${n} rapport${n > 1 ? 's' : ''} généré${n > 1 ? 's' : ''}`;
-  }
-}
-
-// ── Preview ───────────────────────────────────────────────────────────────────
-function openPreview(id) {
-  document.getElementById('preview-iframe').src  = `/reports/preview/${id}`;
-  document.getElementById('preview-pdf-link').href = `/reports/download/${id}`;
   document.getElementById('preview-title').textContent = `Aperçu — ${id}`;
-  document.getElementById('preview-overlay').classList.add('open');
+  iframe.srcdoc = '<body style="background:#0d0d0f;color:#6b6b78;font-family:monospace;padding:40px">Déchiffrement…</body>';
+  overlay.classList.add('open');
+
+  try {
+    const blob = await ArgosDecrypt.fetchReport(`${id}.html.enc`);
+    const html = await blob.text();
+    iframe.srcdoc = html;
+  } catch (e) {
+    iframe.srcdoc = `<body style="background:#0d0d0f;color:#ff4d4d;font-family:monospace;padding:40px">
+      Erreur de déchiffrement : ${e.message}</body>`;
+  }
 }
+
 function closePreview() {
   document.getElementById('preview-overlay').classList.remove('open');
   document.getElementById('preview-iframe').src = 'about:blank';
+  CURRENT_REPORT_ID = null;
 }
 
-// ── Delete ────────────────────────────────────────────────────────────────────
+document.getElementById('preview-pdf-btn').addEventListener('click', () => {
+  if (CURRENT_REPORT_ID) downloadReport(CURRENT_REPORT_ID);
+});
+
+// ════════════════════════════════════════════════════════════════
+// TÉLÉCHARGEMENT PDF — déchiffré en mémoire, jamais sur disque
+// ════════════════════════════════════════════════════════════════
+async function downloadReport(id) {
+  try {
+    showToast('Déchiffrement du PDF…', 'success');
+    const blob = await ArgosDecrypt.fetchReport(`${id}.pdf.enc`);
+    ArgosDecrypt.download(blob, `argos-report-${id}.pdf`);
+  } catch (e) {
+    showToast(`Erreur : ${e.message}`, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// SUPPRESSION
+// ════════════════════════════════════════════════════════════════
 async function deleteReport(id) {
   if (!confirm(`Supprimer le rapport ${id} ?`)) return;
   try {
-    const res = await fetch(`/reports/delete/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/reports/delete/${id}`, { method: 'DELETE', credentials: 'same-origin' });
     const data = await res.json();
     if (!data.ok) throw new Error();
-    const card = document.getElementById('card-' + id);
-    if (card) card.remove();
     showToast('Rapport supprimé', 'success');
-    // Update count
-    const sub = document.querySelector('.page-sub');
-    if (sub) {
-      const n = document.querySelectorAll('.report-card').length;
-      sub.textContent = `${n} rapport${n > 1 ? 's' : ''} généré${n > 1 ? 's' : ''}`;
-      if (n === 0) {
-        const list = document.querySelector('.reports-list');
-        if (list) {
-          list.innerHTML = `
-            <div class="empty-state">
-              <div class="empty-state-icon">📄</div>
-              Aucun rapport généré — cliquez sur « Générer un rapport » pour commencer.
-            </div>`;
-        }
-      }
-    }
+    loadReports();
   } catch {
     showToast('Erreur lors de la suppression', 'error');
   }
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════════════
 let _toastTimer;
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
@@ -451,7 +470,9 @@ function showToast(msg, type = 'success') {
   _toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// KEYBOARD
+// ════════════════════════════════════════════════════════════════
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeModal(); closePreview(); }
 });

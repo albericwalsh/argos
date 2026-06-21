@@ -1046,9 +1046,25 @@ async function saveWorkflow() {
   try {
     // Chiffrement EN MÉMOIRE NAVIGATEUR avec la clé du user connecté,
     // puis PUT direct du payload chiffré vers /proxy/files/workflows/<filename>.
-    // Le serveur WebUI et l'API ne voient jamais le contenu en clair.
+    // Le serveur WebUI et l'API ne voient jamais le contenu en clair à CE stade.
     const filename = `${json.id}.json`;
     await ArgosDecrypt.saveWorkflow(filename, json);
+
+    // Synchronise immédiatement le registre serveur (WORKFLOWS_REGISTERY)
+    // pour que le workflow apparaisse aussitôt dans /run/<id>, /workflows,
+    // et le dashboard, sans attendre une reconnexion. Le clair transmis
+    // ici est le même que celui qui vient d'être chiffré juste au-dessus —
+    // aucune donnée supplémentaire n'est exposée par cet appel.
+    try {
+      await fetch('/workflows/sync', {
+        method:      'POST',
+        credentials: 'same-origin',
+        headers:     { 'Content-Type': 'application/json' },
+        body:        JSON.stringify({ workflow: json, filename }),
+      });
+    } catch (syncErr) {
+      console.warn('Synchro du registre serveur échouée (non bloquant) :', syncErr);
+    }
 
     showToast(`Workflow "${json.name}" sauvegardé`, 'success');
     document.getElementById('wf-status-badge').textContent = json.id;

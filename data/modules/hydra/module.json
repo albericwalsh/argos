@@ -1,0 +1,67 @@
+{
+    "id": "hydra",
+    "name": "Hydra",
+    "category": "Brute Force",
+    "description": "THC-Hydra est un outil de brute-force de credentials réseau supportant de nombreux protocoles (SSH, FTP, HTTP(S), MySQL, RDP, SMB, etc.). Il teste des combinaisons login/mot de passe contre un service cible pour identifier des authentifications faibles ou par défaut.",
+    "parameters": [
+        {
+            "name": "target",
+            "type": "string",
+            "description": "IP ou nom d'hôte de la cible. Peut aussi être la sortie d'un step nmap (liste de services) : dans ce cas Hydra testera chaque service supporté avec un protocole correspondant."
+        },
+        {
+            "name": "service",
+            "type": "string",
+            "description": "Protocole/service à attaquer (ex: 'ssh', 'ftp', 'mysql', 'http-post-form', 'rdp', 'smb'). Si omis et que 'target' contient des services nmap, déduit automatiquement depuis les services détectés supportés par Hydra."
+        },
+        {
+            "name": "port",
+            "type": "string",
+            "description": "Port du service. Si omis, le port par défaut du protocole est utilisé, ou celui détecté depuis les services nmap."
+        },
+        {
+            "name": "login",
+            "type": "string",
+            "description": "Login unique à tester (ex: 'admin'). Mutuellement substituable avec 'login_list'."
+        },
+        {
+            "name": "login_list",
+            "type": "string",
+            "description": "Chemin absolu (hôte) vers un fichier de logins à tester, un par ligne."
+        },
+        {
+            "name": "password",
+            "type": "string",
+            "description": "Mot de passe unique à tester. Mutuellement substituable avec 'password_list'."
+        },
+        {
+            "name": "password_list",
+            "type": "resource",
+            "description": "Chemin absolu (hôte) vers un fichier de mots de passe à tester, un par ligne."
+        },
+        {
+            "name": "http_path",
+            "type": "string",
+            "description": "Requis uniquement pour les services 'http-post-form'/'http-get-form' : chemin et format du formulaire (ex: '/login:user=^USER^&pass=^PASS^:F=incorrect')."
+        },
+        {
+            "name": "options",
+            "type": "string",
+            "description": "Options Hydra supplémentaires (ex: '-t 4' pour le nombre de threads, '-f' pour stopper au premier succès)."
+        }
+    ],
+    "output": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "target":   { "type": "string", "description": "Hôte ciblé." },
+                "port":     { "type": "integer", "description": "Port testé." },
+                "service":  { "type": "string", "description": "Protocole testé (ssh, ftp, mysql...)." },
+                "login":    { "type": "string", "description": "Login trouvé valide." },
+                "password": { "type": "string", "description": "Mot de passe trouvé valide." }
+            }
+        },
+        "description": "Liste des combinaisons login/mot de passe valides trouvées par Hydra (vide si aucune trouvée)."
+    }
+}

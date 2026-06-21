@@ -150,6 +150,32 @@ const ArgosDecrypt = (() => {
   async function listMissions()              { return _proxyGet('/proxy/files/missions'); }
   async function listMissionFiles(name)       { return _proxyGet(`/proxy/files/missions/${encodeURIComponent(name)}`); }
   async function listReports()                { return _proxyGet('/proxy/files/reports'); }
+
+  /**
+   * Liste les rapports groupés par id de mission : { id, html_file, pdf_file }.
+   * Les fichiers bruts retournés par l'API sont individuels (un .html.enc
+   * et un .pdf.enc séparés pour la même mission) ; cette fonction les
+   * fusionne pour l'affichage, sans déchiffrer leur contenu (juste les
+   * métadonnées original_name/name, déjà en clair côté API).
+   */
+  async function listReportsGrouped() {
+    const files = await listReports();
+    const grouped = {};
+
+    for (const f of files) {
+      const original = f.original_name || '';
+      const dot = original.lastIndexOf('.');
+      if (dot === -1) continue;
+      const base = original.slice(0, dot);
+      const ext  = original.slice(dot + 1).toLowerCase();
+      if (ext !== 'html' && ext !== 'pdf') continue;
+
+      if (!grouped[base]) grouped[base] = { id: base, html_file: null, pdf_file: null };
+      grouped[base][`${ext}_file`] = f.name;
+    }
+
+    return Object.values(grouped).sort((a, b) => b.id.localeCompare(a.id));
+  }
   async function listWorkflows()              { return _proxyGet('/proxy/files/workflows'); }
 
 
@@ -160,9 +186,29 @@ const ArgosDecrypt = (() => {
     return _decrypt(payload);
   }
 
+  /**
+   * Récupère et déchiffre un rapport (HTML ou PDF).
+   *
+   * SÉCURITÉ/FORMAT : côté serveur (report_engine.py), le contenu HTML
+   * est chiffré directement (texte → bytes UTF-8 → AES-GCM), mais le PDF
+   * étant binaire et JSON ne transportant que du texte, il est d'abord
+   * encodé en base64 PUIS chiffré. Donc après _decrypt(), un rapport PDF
+   * contient encore du texte base64 et doit être décodé une seconde fois
+   * avant de devenir un vrai Blob PDF binaire exploitable.
+   */
   async function fetchReport(filename) {
     const payload = await _proxyGet(`/proxy/files/reports/${encodeURIComponent(filename)}`);
-    return _decrypt(payload);
+    const blob = await _decrypt(payload);
+
+    const isPdf = (payload.original_name || filename).toLowerCase().endsWith('.pdf');
+    if (!isPdf) return blob;
+
+    // Le blob contient actuellement du texte base64 (mime déjà positionné
+    // à application/pdf par _detectMime, donc on ne peut pas se fier au
+    // type pour distinguer — on décode systématiquement pour les .pdf).
+    const b64Text = await blob.text();
+    const binary  = _b64ToBytes(b64Text);
+    return new Blob([binary], { type: 'application/pdf' });
   }
 
   async function fetchWorkflow(filename) {
@@ -252,7 +298,7 @@ const ArgosDecrypt = (() => {
 
   // ── Export ────────────────────────────────────────────────────────────────
   return {
-    listMissions, listMissionFiles, listReports, listWorkflows,
+    listMissions, listMissionFiles, listReports, listReportsGrouped, listWorkflows,
     fetchMission, fetchReport, fetchWorkflow,
     fetchMissionJSON, fetchWorkflowJSON,
     saveWorkflow, saveMissionFile, saveReport,

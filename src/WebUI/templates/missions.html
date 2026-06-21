@@ -69,19 +69,58 @@ function fmtDate(iso) {
 
 function renderRow(m) {
   const cleanId = (m.id || '').replace('#', '');
+  const canReport = m.status === 'completed';
+  const folderParam = m._mission_folder ? `?folder=${encodeURIComponent(m._mission_folder)}` : '';
   return `
-    <tr data-clickable onclick="window.location='/missions/${cleanId}'">
+    <tr data-clickable onclick="window.location='/missions/${cleanId}${folderParam}'">
       <td class="mono">${m.id}</td>
       <td>${m.name}</td>
       <td class="mono">${m.workflow}</td>
       <td>${badgeFor(m.status)}</td>
       <td class="dim">${fmtDate(m.date_created)}</td>
       <td class="dim">${fmtDuration(m)}</td>
-      <td style="text-align:right">
-        <a href="/missions/${cleanId}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
+      <td style="text-align:right;white-space:nowrap">
+        ${canReport ? `
+        <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
+                data-mission-id="${m.id}"
+                data-mission-folder="${m._mission_folder || ''}"
+                onclick="event.stopPropagation();generateReportFor(this)">
+          ⎙ Rapport
+        </button>` : ''}
+        <a href="/missions/${cleanId}${folderParam}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
            onclick="event.stopPropagation()">Détail →</a>
       </td>
     </tr>`;
+}
+
+async function generateReportFor(btn) {
+  const missionId     = btn.dataset.missionId;
+  const missionFolder = btn.dataset.missionFolder;
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = '…';
+
+  try {
+    const res = await fetch('/reports/generate', {
+      method:      'POST',
+      credentials: 'same-origin',
+      headers:     { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mission_id:     missionId,
+        mission_folder: missionFolder || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Erreur serveur');
+
+    btn.textContent = '✓ Généré';
+    setTimeout(() => { window.location = '/reports'; }, 600);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    alert(`Échec de la génération du rapport : ${e.message}`);
+  }
 }
 
 function startLiveDurations() {
@@ -103,13 +142,20 @@ async function loadMissionHistory() {
     // { mission_name: [ {name, original_name, size}, ... ] }
     const missionsMap = await ArgosDecrypt.listMissions();
 
-    for (const [missionName, files] of Object.entries(missionsMap)) {
+    for (const [missionFolder, files] of Object.entries(missionsMap)) {
       for (const f of files) {
         try {
-          const data = await ArgosDecrypt.fetchMissionJSON(missionName, f.name);
+          const data = await ArgosDecrypt.fetchMissionJSON(missionFolder, f.name);
+          // Conserve le dossier d'origine : nécessaire pour générer un
+          // rapport depuis l'historique (le serveur doit savoir où aller
+          // chercher et déchiffrer le fichier via l'API, faute de quoi
+          // seules les missions encore en mémoire de session pourraient
+          // avoir un rapport généré).
+          data._mission_folder = missionFolder;
+          data._mission_file   = f.name;
           if (!liveIds.has(data.id)) history.push(data);
         } catch (e) {
-          console.error(`Échec déchiffrement ${missionName}/${f.name}`, e);
+          console.error(`Échec déchiffrement ${missionFolder}/${f.name}`, e);
         }
       }
     }

@@ -77,6 +77,42 @@ def load_workflows_for_user(api_base: str, token: str) -> list[Workflow]:
     return WORKFLOWS_REGISTERY
 
 
+def upsert_workflow_in_registry(wf_dict: dict, source_name: str | None = None) -> Workflow:
+    """
+    Ajoute ou met à jour un workflow dans WORKFLOWS_REGISTERY immédiatement
+    après sa création/modification via le builder, sans attendre une
+    reconnexion. Appelé juste après un PUT réussi vers l'API (le workflow
+    existe déjà en clair en mémoire côté navigateur à ce moment-là — pas
+    besoin de re-déchiffrer, le dict est transmis directement par
+    l'appelant qui vient de le construire/recevoir).
+
+    Si un workflow avec le même id existe déjà dans le registre, il est
+    remplacé (édition). Sinon, il est ajouté (création).
+    """
+    new_wf = Workflow.from_dict(wf_dict, source_name=source_name)
+
+    existing_idx = next(
+        (i for i, w in enumerate(WORKFLOWS_REGISTERY) if w.id == new_wf.id),
+        None,
+    )
+    if existing_idx is not None:
+        WORKFLOWS_REGISTERY[existing_idx] = new_wf
+        print(f"[workflow_runner] Workflow '{new_wf.id}' mis à jour dans le registre.")
+    else:
+        WORKFLOWS_REGISTERY.append(new_wf)
+        print(f"[workflow_runner] Workflow '{new_wf.id}' ajouté au registre.")
+
+    return new_wf
+
+
+def remove_workflow_from_registry(workflow_id: str):
+    """Retire un workflow du registre (utilisé lors d'une suppression)."""
+    idx = next((i for i, w in enumerate(WORKFLOWS_REGISTERY) if w.id == workflow_id), None)
+    if idx is not None:
+        WORKFLOWS_REGISTERY.pop(idx)
+        print(f"[workflow_runner] Workflow '{workflow_id}' retiré du registre.")
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # NOTE D'ARCHITECTURE — MULTI-UTILISATEUR CONCURRENT
 # ══════════════════════════════════════════════════════════════════════════════
