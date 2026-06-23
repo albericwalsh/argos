@@ -86,6 +86,10 @@ def inject_globals():
         pass
     return {"is_admin": is_admin}
 
+@app.route("/app/check-update")
+@login_required
+def check_app_update_route():
+    return jsonify(check_app_update())
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  SÉCURITÉ — RAPPEL
@@ -385,6 +389,4 @@ def start_web_server():
     devnull.close()
 
     print(f"[WebUI] Server started on http://{WEB_SERVER_HOST}:{WEB_SERVER_PORT}")
-
-    check_app_update()
     return True

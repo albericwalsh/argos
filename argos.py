@@ -6,7 +6,8 @@ from src.core.module_loader import init_modules_registery
 from src.command_register import init_command
 from src.core.cli import cli_loop
 from src.variables import init_app_variables
-
+from src.update import check_app_update
+import src.variables
 
 def main():
     init_app_variables(os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +20,7 @@ def main():
     init_command()
     args = sys.argv[1:]
 
+    check_app_update()
     if '--web' in args:
         from src.WebUI.server import start_web_server
         if not start_web_server():

@@ -8,6 +8,24 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+<style>
+  .topbar-version.update-available {
+  color: #f5a623;
+  border: 1px solid rgba(245,166,35,.3);
+  background: rgba(245,166,35,.08);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+@keyframes pulseUpdate {
+  0% { opacity: 1; }
+  50% { opacity: .6; }
+  100% { opacity: 1; }
+}
+
+.topbar-version.update-available {
+  animation: pulseUpdate 1.5s infinite;
+}
+</style>
 <body>
 
 {#
@@ -37,7 +55,9 @@
       <div class="status-dot"></div>
       <div class="status-label">Opérationnel</div>
       <div class="topbar-sep"></div>
-      <div class="topbar-version">v{{ APP_VERSION if APP_VERSION else 'null' }}</div>
+      <div class="topbar-version" id="app-version-pill">
+        v{{ APP_VERSION if APP_VERSION else 'null' }}
+      </div>
       <div class="topbar-sep"></div>
       <!-- Mon compte -->
       <a href="/account"
@@ -157,6 +177,46 @@ async function loadSidebarBadges() {
 }
 
 waitForArgosDecryptBadges();
+
+async function checkAppUpdate() {
+  const pill = document.getElementById('app-version-pill');
+  if (!pill) return;
+
+  const original = pill.textContent;
+
+  try {
+    pill.textContent = 'vérif…';
+
+    const res = await fetch('/app/check-update', {
+      credentials: 'same-origin'
+    });
+
+    const data = await res.json();
+
+    if (!data || !data.remote_version) {
+      pill.textContent = original;
+      return;
+    }
+
+    if (data.update_available) {
+      pill.textContent = `v${data.local_version} → v${data.remote_version}`;
+      pill.classList.add('update-available');
+
+      showAppUpdateToast(data.remote_version);
+    } else {
+      pill.textContent = `v${data.local_version} (à jour)`;
+    }
+
+  } catch (e) {
+    pill.textContent = original;
+  }
+}
+function showAppUpdateToast(version) {
+  showToast(`Nouvelle version disponible : v${version}`, 'success');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(checkAppUpdate, 500);
+});
 </script>
 </body>
 </html>

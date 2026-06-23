@@ -29,13 +29,15 @@ MISSIONS_REGISTERY = []
 
 def init_app_variables(app_dir):
     '''Initialise les variables de l'application.'''
-    global APP_DIR, APP_NAME, APP_VERSION
+    global APP_DIR
     APP_DIR = app_dir
     with open_file(os.path.join(APP_DIR, 'argos.properties')) as f:
         for line in f:
             if line.startswith('APP_NAME'):
+                global APP_NAME
                 APP_NAME = line.split('=')[1].strip().strip('"')
             elif line.startswith('APP_VERSION'):
+                global APP_VERSION
                 APP_VERSION = line.split('=')[1].strip().strip('"')
             elif line.startswith('WEB_SERVER_HOST'):
                 global WEB_SERVER_HOST
@@ -72,8 +74,7 @@ def init_app_variables(app_dir):
             elif line.startswith('CORS_HEADERS'):
                 global CORS_HEADERS
                 raw = line.split('=', 1)[1].strip().strip('[]')
-                CORS_HEADERS = [h.strip().strip('"').strip("'") for h in raw.split(',') if h.strip()]
-            
+                CORS_HEADERS = [h.strip().strip('"').strip("'") for h in raw.split(',') if h.strip()]            
 
 
 def register_command(command):
