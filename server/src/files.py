@@ -117,11 +117,12 @@ def _build_payload(file_path: Path, perm_key: str) -> dict:
                                 "et ne disposez pas de la permission '*' requise")
 
     return {
-        'nonce':         envelope['nonce'],
-        'ciphertext':    envelope['ciphertext'],
-        'original_name': envelope.get('original_name'),
-        'enc_key':       resolved_key,
-        'owner_id':      owner_id,   # informatif, non sensible
+        'nonce':          envelope['nonce'],
+        'ciphertext':     envelope['ciphertext'],
+        'original_name':  envelope.get('original_name'),
+        'enc_key':        resolved_key,
+        'owner_id':       owner_id,
+        'owner_username': _username_for(owner_id, users) if owner_id else None,
     }
 
 
@@ -157,13 +158,20 @@ def _save_enc(file_path: Path, body: dict, perm_key: str):
         final_owner = current_id
 
     file_path.parent.mkdir(parents=True, exist_ok=True)
+    envelope_out = {
+        'owner_id':      final_owner,
+        'nonce':         body['nonce'],
+        'ciphertext':    body['ciphertext'],
+        'original_name': body['original_name'],
+    }
+    # Métadonnée optionnelle non sensible (ex: nom de mission pour un
+    # rapport) — stockée en clair dans l'enveloppe au même titre que
+    # original_name/owner_id, jamais à la place du contenu chiffré.
+    if 'mission_name' in body:
+        envelope_out['mission_name'] = body['mission_name']
+
     with open(file_path, 'w') as f:
-        json.dump({
-            'owner_id':      final_owner,
-            'nonce':         body['nonce'],
-            'ciphertext':    body['ciphertext'],
-            'original_name': body['original_name'],
-        }, f)
+        json.dump(envelope_out, f)
 
 
 def _can_list(envelope_owner: str, perm_key: str) -> bool:
@@ -175,13 +183,33 @@ def _can_list(envelope_owner: str, perm_key: str) -> bool:
 #  MISSIONS  (2 niveaux : missions/<name>/<id>.json)
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _username_for(owner_id: str, users: list[dict]) -> str | None:
+    """Résout un owner_id en username lisible, pour affichage dans l'UI."""
+    user = next((u for u in users if str(u['id']) == str(owner_id)), None)
+    return user.get('username') if user else None
+
+
+def _file_meta(p: Path, envelope: dict, users: list[dict]) -> dict:
+    """Métadonnées communes à tous les listings, incluant l'auditeur (owner)."""
+    owner_id = envelope.get('owner_id')
+    return {
+        "name":           p.name,
+        "original_name":  p.stem,
+        "size":           p.stat().st_size,
+        "mtime":          p.stat().st_mtime,
+        "owner_id":       owner_id,
+        "owner_username": _username_for(owner_id, users) if owner_id else None,
+        "mission_name":   envelope.get('mission_name'),
+    }
+
+
 @files_bp.route('/missions', methods=['GET'])
 @token_required
 def list_missions():
     """
     Liste toutes les missions visibles par le current_user
     (dont il est owner, ou pour lesquelles il a missions:* ).
-    Retourne : { "mission_name": [{name, original_name, size}, ...], ... }
+    Retourne : { "mission_name": [{name, original_name, size, owner_id, owner_username}, ...], ... }
     """
     _check_perm('missions', 'read')
 
@@ -189,6 +217,7 @@ def list_missions():
     if not missions_dir.exists():
         return jsonify({})
 
+    users = load_users()
     result = {}
     for mission_dir in sorted(missions_dir.iterdir()):
         if not mission_dir.is_dir():
@@ -201,11 +230,7 @@ def list_missions():
                 continue
             if not _can_list(envelope.get('owner_id'), 'missions'):
                 continue
-            files.append({
-                "name":          p.name,
-                "original_name": p.stem,
-                "size":          p.stat().st_size,
-            })
+            files.append(_file_meta(p, envelope, users))
         if files:
             result[mission_dir.name] = files
 
@@ -221,6 +246,7 @@ def list_mission_files(mission_name: str):
     if not mission_dir.exists() or not mission_dir.is_dir():
         abort(404, description=f"Mission introuvable : {mission_name}")
 
+    users = load_users()
     files = []
     for p in sorted(mission_dir.glob('*.enc')):
         try:
@@ -229,11 +255,7 @@ def list_mission_files(mission_name: str):
             continue
         if not _can_list(envelope.get('owner_id'), 'missions'):
             continue
-        files.append({
-            "name":          p.name,
-            "original_name": p.stem,
-            "size":          p.stat().st_size,
-        })
+        files.append(_file_meta(p, envelope, users))
     return jsonify(files)
 
 
@@ -285,6 +307,7 @@ def list_flat_files(category: str):
     if not cat_dir.exists():
         return jsonify([])
 
+    users = load_users()
     files = []
     for p in sorted(cat_dir.glob('*.enc')):
         try:
@@ -293,11 +316,7 @@ def list_flat_files(category: str):
             continue
         if not _can_list(envelope.get('owner_id'), perm_key):
             continue
-        files.append({
-            "name":          p.name,
-            "original_name": p.stem,
-            "size":          p.stat().st_size,
-        })
+        files.append(_file_meta(p, envelope, users))
     return jsonify(files)
 
 

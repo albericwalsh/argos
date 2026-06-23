@@ -39,6 +39,15 @@
       <div class="topbar-sep"></div>
       <div class="topbar-version">v{{ APP_VERSION if APP_VERSION else '0.1.0' }}</div>
       <div class="topbar-sep"></div>
+      <!-- Mon compte -->
+      <a href="/account"
+         style="font-family:var(--font-mono);font-size:10px;color:var(--muted);
+                text-decoration:none;padding:4px 8px;border:1px solid var(--border);
+                border-radius:3px;transition:color .15s,border-color .15s"
+         onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--border-hover,#3a3a3e)'"
+         onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">
+        ⚙ Mon compte
+      </a>
       <!-- Bouton logout -->
       <a href="/logout"
          style="font-family:var(--font-mono);font-size:10px;color:var(--muted);
@@ -67,12 +76,12 @@
     <a class="nav-item {% if request.path == '/missions' %}active{% endif %} " href="/missions">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Missions
-      <span class="nav-badge">12</span>
+      <span class="nav-badge" id="badge-missions">…</span>
     </a>
     <a class="nav-item {% if request.path == '/reports' %}active{% endif %}" href="/reports">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Rapports
-      <span class="nav-badge">5</span>
+      <span class="nav-badge" id="badge-reports">…</span>
     </a>
 
     <div class="nav-section">Système</div>
@@ -114,5 +123,40 @@
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 {# decrypt.js est chargé après script.js pour être disponible dans toutes les pages #}
 <script type="module" src="{{ url_for('static', filename='decrypt.js') }}"></script>
+
+<script>
+// ── Badges dynamiques de la sidebar ────────────────────────────────────────────
+// Remplace les valeurs statiques (12, 5) par le compte réel, visible
+// uniquement par l'utilisateur courant (owner ou permission '*'), calculé
+// après déchiffrement des métadonnées via le proxy chiffré.
+function waitForArgosDecryptBadges(attempts = 0) {
+  if (window.ArgosDecrypt) { loadSidebarBadges(); return; }
+  if (attempts > 100) return;  // ~5s max, abandon silencieux si jamais chargé
+  setTimeout(() => waitForArgosDecryptBadges(attempts + 1), 50);
+}
+
+async function loadSidebarBadges() {
+  try {
+    const missionsMap = await ArgosDecrypt.listMissions();
+    const missionCount = Object.values(missionsMap).reduce((sum, files) => sum + files.length, 0);
+    const el = document.getElementById('badge-missions');
+    if (el) el.textContent = missionCount;
+  } catch (e) {
+    const el = document.getElementById('badge-missions');
+    if (el) el.textContent = '–';
+  }
+
+  try {
+    const reportFiles = await ArgosDecrypt.listReportsGrouped();
+    const el = document.getElementById('badge-reports');
+    if (el) el.textContent = reportFiles.length;
+  } catch (e) {
+    const el = document.getElementById('badge-reports');
+    if (el) el.textContent = '–';
+  }
+}
+
+waitForArgosDecryptBadges();
+</script>
 </body>
 </html>

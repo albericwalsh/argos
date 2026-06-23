@@ -1,8 +1,6 @@
-import os
-
 from src.core.command import command
-from src.utils import open_file
-from src.variables import APP_DIR, MODULES_REGISTERY
+from src.core.cli_colors import muted, accent_bold
+from src.variables import MODULES_REGISTERY
 
 
 class ListModulesCommand(command):
@@ -16,12 +14,11 @@ class ListModulesCommand(command):
         )
 
     def show_modules(self, *args):
-        modules_text = (
-            "#-----------------------------------------\n"
-            "  > Modules disponibles :\n"
-            "#-----------------------------------------\n\n"
-        )
+        print(muted("#-----------------------------------------"))
+        print(muted("  > Modules disponibles :"))
+        print(muted("#-----------------------------------------\n"))
 
-        for modules in MODULES_REGISTERY:
-            modules_text += f"  - {modules.name} [{modules.id}] : {modules.category}\n"
-        print(modules_text)
+        for module in MODULES_REGISTERY:
+            version = f" v{module.version}" if getattr(module, "version", None) else ""
+            print(f"  - {module.name} [{accent_bold(module.id)}]{muted(version)} : {module.category}")
+        print()

@@ -1,0 +1,34 @@
+{
+    "id": "paramspider",
+    "name": "ParamSpider",
+    "version": "1.0.0",
+    "repository": "https://github.com/paramspider/paramspider",
+    "category": "Reconnaissance",
+    "description": "ParamSpider extrait les paramètres d'URL historiques d'un domaine en interrogeant les archives web (Wayback Machine). Utile pour découvrir des points d'entrée potentiellement vulnérables (injection, redirection ouverte, XSS) sans envoyer de requêtes directes à la cible.",
+    "parameters": [
+        {
+            "name": "target",
+            "type": "string",
+            "description": "Domaine cible (ex: example.com), ou référence vers la sortie d'un autre module (ex: $nmap.output)."
+        },
+        {
+            "name": "exclude_extensions",
+            "type": "string",
+            "description": "Extensions de fichiers à exclure des résultats, séparées par des virgules (ex: png,jpg,css,js)."
+        },
+        {
+            "name": "max_urls",
+            "type": "string",
+            "description": "Nombre maximum d'URLs à récupérer depuis la Wayback Machine (par défaut 5000)."
+        },
+        {
+            "name": "verify_status",
+            "type": "string",
+            "description": "Vérifie le code HTTP réel de chaque URL trouvée (requêtes GET vers la cible, plafonnées à 300 URLs). true/false, défaut true."
+        }
+    ],
+    "output": {
+        "type": "object",
+        "description": "Liste des URLs avec paramètres trouvées, et liste dédoublonnée des noms de paramètres détectés."
+    }
+}

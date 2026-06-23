@@ -21,7 +21,10 @@
     "users_perm": [
       "*"
     ],
-    "encryption_key": "JcdISHy-ohiWiDDaaFINjW9YGJct46jo5yFU_dM0D-Q="
+    "encryption_key": "JcdISHy-ohiWiDDaaFINjW9YGJct46jo5yFU_dM0D-Q=",
+    "display_name": "",
+    "email": "",
+    "disabled": false
   },
   {
     "id": 3,
@@ -44,6 +47,24 @@
     "ressources_perm": [
       "read"
     ],
+    "users_perm": [],
+    "display_name": "",
+    "email": "",
+    "disabled": false
+  },
+  {
+    "id": 4,
+    "username": "bob",
+    "password": "scrypt:32768:8:1$GTGf8zh2WoFvDTft$78fa4b535886bb77d63e83a8976d7a8d9f0c4d96ca68e4e6b34cbf748cbc971077fe262889932e6fc809aed737757d9e242ffa1d4ec0b411107a3afc6d98ca42",
+    "encryption_key": "cc3NQoZMOA10AUSs6s1ONL_-H0F0b8Bp4gpKywtjVfE=",
+    "display_name": "Bob",
+    "email": "",
+    "disabled": false,
+    "modules": [],
+    "rapports_perm": [],
+    "missions_perm": [],
+    "worklows_perm": [],
+    "ressources_perm": [],
     "users_perm": []
   }
 ]

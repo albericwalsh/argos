@@ -1,5 +1,5 @@
 """
-report_engine.py
+report.py
 Argos — Report Engine v3 (chiffré)
 Génère des rapports HTML/PDF en assemblant les render.html de chaque
 module impliqué dans une mission.
@@ -112,6 +112,23 @@ def _render_step_fragment(template_path, step, step_id, step_index, module):
 
     env.filters["tojson"] = _tojson
     env.filters["fromjson"] = json.loads
+
+    def _index_by(items, key):
+        """
+        Filtre Jinja : transforme une liste de dicts en dict indexé par
+        une clé donnée. Utilisé par les modules (ex: paramspider) pour
+        retrouver rapidement le détail d'une URL sans recourir à un
+        pattern dict.update() en boucle, plus fragile et illisible
+        dans un template.
+        Usage : {% set by_url = results | index_by("url") %}
+        """
+        out = {}
+        for item in items or []:
+            if isinstance(item, dict) and key in item:
+                out[item[key]] = item
+        return out
+
+    env.filters["index_by"] = _index_by
 
     tmpl = env.get_template(template_file)
     return tmpl.render(step=step, step_id=step_id, step_index=step_index, module=module or {})
@@ -304,7 +321,7 @@ def _build_step_module_map(mission: dict, api_base: str, token: str) -> dict[str
         wf = fetch_and_decrypt_json(api_base, token, f"/files/workflows/{workflow_id}.json")
         return {s["id"]: s["module"] for s in wf.get("steps", []) if "id" in s and "module" in s}
     except Exception as e:
-        print(f"[report_engine] Impossible de déchiffrer le workflow {workflow_id} : {e}")
+        print(f"[report] Impossible de déchiffrer le workflow {workflow_id} : {e}")
         return {}
 
 
@@ -523,7 +540,8 @@ def generate_report(mission: dict, api_base: str, token: str, owner_key: str) ->
     from src.crypto_utils import encrypt_bytes
 
     modules_dir = os.path.join(APP_DIR, "data", "modules")  # définitions de modules : non sensible, reste sur disque
-    mission_id  = mission.get("id", "unknown").lstrip("#").replace(" ", "_")
+    mission_id   = mission.get("id", "unknown").lstrip("#").replace(" ", "_")
+    mission_name = mission.get("name", "") or mission_id
 
     html_content = generate_html(mission, modules_dir, api_base, token)
     pdf_bytes    = generate_pdf_bytes(mission, modules_dir, api_base, token)
@@ -533,6 +551,7 @@ def generate_report(mission: dict, api_base: str, token: str, owner_key: str) ->
     html_filename = f"{mission_id}.html"
     envelope_html = encrypt_bytes(html_content.encode("utf-8"), owner_key)
     envelope_html["original_name"] = html_filename
+    envelope_html["mission_name"]  = mission_name
     _put_report_envelope(api_base, token, html_filename, envelope_html)
 
     # ── PDF : binaire, encodé en base64 avant chiffrement (le contenu
@@ -541,6 +560,7 @@ def generate_report(mission: dict, api_base: str, token: str, owner_key: str) ->
     pdf_b64      = base64.b64encode(pdf_bytes).decode("ascii")
     envelope_pdf = encrypt_bytes(pdf_b64.encode("utf-8"), owner_key)
     envelope_pdf["original_name"] = pdf_filename
+    envelope_pdf["mission_name"]  = mission_name
     _put_report_envelope(api_base, token, pdf_filename, envelope_pdf)
 
     return {"id": mission_id, "html_filename": html_filename, "pdf_filename": pdf_filename}
@@ -562,8 +582,8 @@ def list_reports(api_base: str, token: str) -> list[dict]:
     Liste les rapports visibles par le user courant via l'API
     (owner ou permission rapports:*). Remplace l'ancien scan disque.
 
-    Retourne une liste de dicts {id, html_file, pdf_file, generated}
-    compatible avec le template reports.html existant.
+    Retourne une liste de dicts {id, html_file, pdf_file, generated,
+    mission_name} compatible avec le template reports.html.
     """
     import requests
 
@@ -576,7 +596,7 @@ def list_reports(api_base: str, token: str) -> list[dict]:
         resp.raise_for_status()
         files = resp.json()
     except Exception as e:
-        print(f"[report_engine] Impossible de lister les rapports : {e}")
+        print(f"[report] Impossible de lister les rapports : {e}")
         return []
 
     seen: dict[str, dict] = {}
@@ -586,13 +606,34 @@ def list_reports(api_base: str, token: str) -> list[dict]:
         if ext not in (".html", ".pdf"):
             continue
         if base not in seen:
-            seen[base] = {"id": base, "html_file": None, "pdf_file": None}
+            seen[base] = {
+                "id":           base,
+                "html_file":    None,
+                "pdf_file":     None,
+                "mtime":        0,
+                "mission_name": f.get("mission_name") or base,
+            }
         seen[base][f"{ext[1:]}_file"] = f["name"]
+        # Garde le mtime le plus récent entre html et pdf pour ce rapport
+        seen[base]["mtime"] = max(seen[base]["mtime"], f.get("mtime", 0))
+        if f.get("mission_name") and not seen[base].get("mission_name_set"):
+            seen[base]["mission_name"] = f["mission_name"]
+            seen[base]["mission_name_set"] = True
 
-    return [
-        {"id": base, "html_file": info["html_file"], "pdf_file": info["pdf_file"], "generated": "—"}
-        for base, info in sorted(seen.items(), reverse=True)
-    ]
+    result = []
+    for base, info in sorted(seen.items(), key=lambda kv: kv[1]["mtime"], reverse=True):
+        generated = (
+            datetime.fromtimestamp(info["mtime"]).strftime("%Y-%m-%d %H:%M")
+            if info["mtime"] else "—"
+        )
+        result.append({
+            "id":           base,
+            "html_file":    info["html_file"],
+            "pdf_file":     info["pdf_file"],
+            "generated":    generated,
+            "mission_name": info["mission_name"],
+        })
+    return result
 
 
 def fetch_report_html(api_base: str, token: str, enc_key: str, filename: str) -> str:

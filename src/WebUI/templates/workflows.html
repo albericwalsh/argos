@@ -100,7 +100,7 @@ function renderCard(wf) {
         <div class="wf-card-icon">${(wf.name || '?').slice(0,2).toUpperCase()}</div>
         <div style="flex:1;min-width:0">
           <div class="wf-card-name">${wf.name}</div>
-          <div class="wf-card-id">${wf.id}</div>
+          <div class="wf-card-id">${wf.id}${wf._owner_username ? ` · créé par <span style="color:var(--text)">${wf._owner_username}</span>` : ''}</div>
         </div>
       </div>
       ${wf.description ? `<div class="wf-card-desc">${wf.description}</div>` : ''}
@@ -124,6 +124,9 @@ async function loadWorkflows() {
     for (const f of files) {
       try {
         const wf = await ArgosDecrypt.fetchWorkflowJSON(f.name);
+        // f vient du listing API et contient déjà owner_username
+        // (résolu depuis owner_id côté serveur — info de traçabilité).
+        wf._owner_username = f.owner_username || null;
         workflows.push(wf);
       } catch (e) {
         console.error(`Échec déchiffrement ${f.name}`, e);

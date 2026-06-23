@@ -120,6 +120,51 @@ def update_perms(user_id: int):
     return jsonify(data), status
 
 
+@admin_bp.route("/users", methods=["POST"])
+@login_required
+def create_user():
+    """Relais vers POST /admin/users (création d'un nouveau compte)."""
+    body = request.get_json(silent=True) or {}
+    data, status = _api("post", "/admin/users", json=body)
+    return jsonify(data), status
+
+
+@admin_bp.route("/users/<int:user_id>/profile", methods=["POST"])
+@login_required
+def update_user_profile(user_id: int):
+    """Relais vers POST /admin/users/<id>/profile (display_name/email)."""
+    body = request.get_json(silent=True) or {}
+    data, status = _api("post", f"/admin/users/{user_id}/profile", json=body)
+    return jsonify(data), status
+
+
+@admin_bp.route("/users/<int:user_id>/disable", methods=["POST"])
+@login_required
+def disable_user(user_id: int):
+    data, status = _api("post", f"/admin/users/{user_id}/disable")
+    return jsonify(data), status
+
+
+@admin_bp.route("/users/<int:user_id>/enable", methods=["POST"])
+@login_required
+def enable_user(user_id: int):
+    data, status = _api("post", f"/admin/users/{user_id}/enable")
+    return jsonify(data), status
+
+
+@admin_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
+@login_required
+def reset_password(user_id: int):
+    """
+    Relais vers POST /admin/users/<id>/reset-password.
+    Le mot de passe généré (si pas de new_password fourni) transite une
+    seule fois dans cette réponse, jamais stocké côté WebUI.
+    """
+    body = request.get_json(silent=True) or {}
+    data, status = _api("post", f"/admin/users/{user_id}/reset-password", json=body)
+    return jsonify(data), status
+
+
 @admin_bp.route("/users/<int:user_id>", methods=["DELETE"])
 @login_required
 def delete_user(user_id: int):

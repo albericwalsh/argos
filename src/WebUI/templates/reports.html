@@ -264,7 +264,7 @@
       <button class="btn btn-ghost" style="font-size:11px" onclick="closePreview()">✕ Fermer</button>
     </div>
   </div>
-  <iframe class="preview-iframe" id="preview-iframe" src="about:blank" sandbox="allow-same-origin"></iframe>
+  <iframe class="preview-iframe" id="preview-iframe" src="about:blank" sandbox="allow-same-origin allow-scripts"></iframe>
 </div>
 
 
@@ -284,11 +284,17 @@
 let CURRENT_REPORT_ID = null;
 
 function renderReportCard(r) {
+  const metaParts = [];
+  if (r.mission_name) metaParts.push(r.mission_name);
+  if (r.owner_username) metaParts.push(`créé par ${r.owner_username}`);
+  if (r.generated && r.generated !== '—') metaParts.push(r.generated);
+  const metaLine = metaParts.length ? metaParts.join(' · ') : 'Rapport chiffré';
+
   return `
     <div class="report-card" id="card-${r.id}">
       <div>
         <div class="report-card-id">${r.id}</div>
-        <div class="report-card-meta">Rapport chiffré</div>
+        <div class="report-card-meta">${metaLine}</div>
       </div>
       <div class="report-card-actions">
         ${r.html_file ? `
@@ -311,7 +317,7 @@ async function loadReports() {
 
   let reports = [];
   try {
-    // report_engine.list_reports() côté API retourne déjà la forme
+    // report.list_reports() côté API retourne déjà la forme
     // [{ id, html_file, pdf_file }] groupée par mission_id — pas de
     // déchiffrement de contenu nécessaire ici, juste les métadonnées.
     reports = await ArgosDecrypt.listReportsGrouped();

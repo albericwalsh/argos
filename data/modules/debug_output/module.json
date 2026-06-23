@@ -1,6 +1,8 @@
 {
     "id": "debug_output",
     "name": "Debug Output",
+    "version": "1.0",
+    "repository": "",
     "category": "Debug",
     "description": "Module de debug qui consomme l'output du step précédent et l'affiche."
 }

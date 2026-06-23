@@ -9,6 +9,9 @@ DEFAULT_ADMIN = {
     'id': 1,
     'username': 'admin',
     'password': generate_password_hash('admin123'),
+    'display_name': 'Administrateur',
+    'email': '',
+    'disabled': False,
     'modules': ['*'],
     'rapports_perm': ['*'],
     'missions_perm': ['*'],
@@ -35,6 +38,42 @@ def _save_raw(users: list) -> None:
         json.dump(users, f, indent=2)
 
 
+# ─── Migration de schéma ──────────────────────────────────────────────────────
+
+USER_FIELD_DEFAULTS = {
+    'display_name':    '',
+    'email':            '',
+    'disabled':         False,
+    'modules':          [],
+    'rapports_perm':    [],
+    'missions_perm':    [],
+    'worklows_perm':    [],
+    'ressources_perm':  [],
+    'users_perm':       [],
+}
+
+def _migrate_user(user: dict) -> dict:
+    """
+    Complète un user existant avec les nouveaux champs (display_name,
+    email, disabled) sans rien écraser, pour rester compatible avec les
+    comptes créés avant l'ajout de la gestion de profil/blocage.
+    """
+    changed = False
+    for field, default in USER_FIELD_DEFAULTS.items():
+        if field not in user:
+            user[field] = default
+            changed = True
+    return user, changed
+
+
+def _migrate_all(users: list) -> tuple[list, bool]:
+    any_changed = False
+    for u in users:
+        _, changed = _migrate_user(u)
+        any_changed = any_changed or changed
+    return users, any_changed
+
+
 # ─── Initialisation ───────────────────────────────────────────────────────────
 
 def init_users(reset: bool = False) -> None:
@@ -46,23 +85,20 @@ def init_users(reset: bool = False) -> None:
       - fichier corrompu / format invalide
       - liste vide
       - admin manquant
+      - schéma obsolète (migration des champs manquants : display_name,
+        email, disabled)
       - reset forcé (repart de DEFAULT_USERS)
-
-    Args:
-        reset: Si True, écrase complètement users.json avec DEFAULT_USERS.
     """
     if reset:
         print('[db] reset forcé → restauration des utilisateurs par défaut')
         _save_raw(DEFAULT_USERS)
         return
 
-    # Fichier absent
     if not os.path.exists(DATA_PATH):
         print('[db] users.json absent → création avec utilisateurs par défaut')
         _save_raw(DEFAULT_USERS)
         return
 
-    # Fichier présent mais potentiellement corrompu
     try:
         users = _load_raw()
     except (json.JSONDecodeError, ValueError) as e:
@@ -70,18 +106,21 @@ def init_users(reset: bool = False) -> None:
         _save_raw(DEFAULT_USERS)
         return
 
-    # Liste vide
     if not users:
         print('[db] users.json vide → injection des utilisateurs par défaut')
         _save_raw(DEFAULT_USERS)
         return
 
-    # Admin manquant
     has_admin = any(u.get('username') == 'admin' for u in users)
     if not has_admin:
         print('[db] admin absent → injection du compte admin')
-        # Préserve les autres users, insère admin en tête
         users.insert(0, DEFAULT_ADMIN)
+        _save_raw(users)
+        return
+
+    users, migrated = _migrate_all(users)
+    if migrated:
+        print('[db] schéma utilisateur obsolète → migration des champs manquants')
         _save_raw(users)
         return
 
@@ -93,6 +132,12 @@ def load_users() -> list:
     init_users()
     return _load_raw()
 
+
 def save_users(users: list) -> None:
     """Sauvegarde la liste des users."""
     _save_raw(users)
+
+
+def next_user_id(users: list) -> int:
+    """Calcule le prochain id disponible pour un nouveau compte."""
+    return max((u['id'] for u in users), default=0) + 1

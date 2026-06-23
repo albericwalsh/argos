@@ -20,6 +20,8 @@ class Module:
         self.category = module_file.get('category')
         self.description = module_file.get('description')
         self.entry_arg = module_file.get('entry_arg')
+        self.version = module_file.get('version')          # ex: "1.2.0" — optionnel
+        self.repository = module_file.get('repository')    # ex: URL GitHub raw module.json — optionnel
         # Chargement dynamique du entry.py
         entry_path = os.path.join(directory, 'entry.py')
         self.parameters = module_file.get('parameters', [])
@@ -39,11 +41,11 @@ class Module:
             module_name,
             entry_path
         )
-        
+
         assert spec is not None, f"Failed to load module spec for {entry_path}"
 
         loaded_module = importlib.util.module_from_spec(spec)
-        
+
         assert spec.loader is not None, f"Module spec loader is None for {entry_path}"
 
         spec.loader.exec_module(loaded_module)

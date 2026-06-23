@@ -1,31 +1,410 @@
-
 {% extends "base.html" %}
 {% block content %}
-  <!-- ton contenu ici -->
-    <!-- ══════════════ PAGE : MODULES (stub) ══════════════ -->
+<!-- ══════════════ PAGE : MODULES ══════════════ -->
 
-      <div class="page-header">
-        <div><div class="page-title">Modules</div><div class="page-sub">Registre des modules installés</div></div>
-        <button class="btn btn-primary">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Installer un module
-        </button>
+<style>
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+  }
+  .mod-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color .15s;
+  }
+  .mod-card:hover { border-color: var(--border-hover, #3a3a3e); }
+  .mod-card-header { display: flex; align-items: flex-start; gap: 12px; }
+  .mod-card-icon {
+    width: 36px; height: 36px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+    background: rgba(0,229,160,.1);
+    color: var(--accent);
+  }
+  .mod-card-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .mod-card-cat  { font-family: var(--font-mono); font-size: 10px; color: var(--accent); }
+  .mod-card-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  .mod-card-meta {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    font-family: var(--font-mono); font-size: 9px; color: var(--muted);
+  }
+  .mod-version-pill {
+    padding: 1px 6px; border-radius: 3px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--border);
+  }
+  .mod-version-pill.update-available {
+    background: rgba(245,166,35,.1); border-color: rgba(245,166,35,.3); color: #f5a623;
+  }
+
+  .mod-card-actions {
+    display: flex; gap: 6px; margin-top: 4px;
+    border-top: 1px solid var(--border); padding-top: 10px;
+  }
+
+  .empty-state {
+    padding: 60px; text-align: center; color: var(--muted);
+    font-family: var(--font-mono); font-size: 12px;
+    border: 1px dashed var(--border); border-radius: 4px;
+  }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: .3; }
+
+  /* ── Modal install ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(4px);
+    z-index: 900;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 440px;
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-title {
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+  }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+  .modal-body { padding: 20px; }
+  .modal-footer {
+    padding: 14px 20px; border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 6px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .dropzone:hover, .dropzone.drag-over {
+    border-color: var(--accent);
+    background: rgba(0,229,160,.04);
+  }
+  .dropzone-icon { font-size: 28px; margin-bottom: 8px; opacity: .5; }
+  .dropzone-filename {
+    margin-top: 10px; color: var(--accent); font-weight: 600;
+  }
+
+  .install-progress {
+    margin-top: 12px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+    display: none;
+    align-items: center; gap: 8px;
+  }
+  .install-progress.active { display: flex; }
+  .mini-spinner {
+    width: 12px; height: 12px;
+    border: 2px solid rgba(0,229,160,.2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .install-alert {
+    margin-top: 10px; padding: 8px 10px; border-radius: 3px;
+    font-family: var(--font-mono); font-size: 11px;
+  }
+  .install-alert.error   { background: rgba(255,77,77,.08); border: 1px solid rgba(255,77,77,.25); color: #ff4d4d; }
+  .install-alert.success { background: rgba(0,229,160,.08); border: 1px solid rgba(0,229,160,.25); color: var(--accent); }
+
+  .delete-confirm {
+    display: none; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 10px; color: #ff4d4d;
+  }
+  .delete-confirm.visible { display: flex; }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    padding: 11px 16px; font-family: var(--font-mono); font-size: 11px;
+    display: flex; gap: 8px; align-items: center; z-index: 999;
+    transform: translateY(150%); transition: transform .2s ease;
+    max-width: 360px;
+  }
+  .toast.show { transform: none; }
+  .toast.success { border-color: var(--accent); }
+  .toast.error   { border-color: #ff4d4d; }
+  .toast-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .toast.success .toast-dot { background: var(--accent); }
+  .toast.error   .toast-dot { background: #ff4d4d; }
+</style>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">Modules</div>
+    <div class="page-sub">{{ MODULES | length }} module{{ 's' if MODULES | length != 1 }} installé{{ 's' if MODULES | length != 1 }}</div>
+  </div>
+  <button class="btn btn-primary" onclick="openInstallModal()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Installer un module
+  </button>
+</div>
+
+{% if MODULES %}
+<div class="modules-grid" id="modules-grid">
+  {% for module in MODULES %}
+  <div class="mod-card" id="mod-card-{{ module.id }}">
+    <div class="mod-card-header">
+      <div class="mod-card-icon">{{ module.name[:2].upper() }}</div>
+      <div style="flex:1;min-width:0">
+        <div class="mod-card-name">{{ module.name }}</div>
+        <div class="mod-card-cat">{{ module.category }}</div>
       </div>
-      <div class="card" style="padding:60px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px">
-        {% for module in MODULES %}
-        <div class="module-item">
-          <div class="module-icon green">{{ module.name[:2].upper() }}</div>
-          <div class="module-info">
-            <div class="module-name">{{ module.name }}</div>
-            <div class="module-desc">{{ module.description }}</div>
-          </div>
-          <div class="module-tag">{{ module.category }}</div>
-        </div>
-        {% else %}
-        <div style="padding:40px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px">
-          Aucun module installé
-        </div>
-        {% endfor %}
+    </div>
+
+    <div class="mod-card-desc">{{ module.description }}</div>
+
+    <div class="mod-card-meta">
+      <span class="mod-version-pill" id="version-pill-{{ module.id }}">
+        {{ ('v' + module.version) if module.version else 'version inconnue' }}
+      </span>
+      {% if module.repository %}
+      <span class="mod-version-pill" style="cursor:pointer" onclick="checkUpdate('{{ module.id }}')" title="Vérifier les mises à jour">
+        ⟳ vérifier
+      </span>
+      {% endif %}
+    </div>
+
+    <div class="mod-card-actions">
+      <div class="delete-confirm" id="del-confirm-{{ module.id }}">
+        Supprimer ?
+        <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px" onclick="cancelDelete('{{ module.id }}')">Non</button>
+        <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;color:#ff4d4d" onclick="confirmDelete('{{ module.id }}', '{{ module.name }}')">Oui</button>
       </div>
+      <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px;color:#ff4d4d;margin-left:auto"
+              id="del-btn-{{ module.id }}"
+              onclick="askDelete('{{ module.id }}')">
+        ✕ Supprimer
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">⬡</div>
+  Aucun module installé — cliquez sur « Installer un module » pour commencer.
+</div>
+{% endif %}
+
+
+<!-- ══ MODAL : Installer un module ══ -->
+<div class="modal-overlay" id="install-modal-overlay" onclick="closeInstallModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">// Installer un module</span>
+      <button class="modal-close" onclick="closeInstallModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+        <div class="dropzone-icon">📦</div>
+        <div>Cliquez pour sélectionner un fichier <strong>.zip</strong><br>ou glissez-le ici</div>
+        <div class="dropzone-filename" id="dropzone-filename"></div>
+      </div>
+      <input type="file" id="file-input" accept=".zip" style="display:none" onchange="onFileSelected(this.files)">
+
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:10px;line-height:1.6">
+        L'archive doit contenir <code>module.json</code> et <code>entry.py</code>
+        (à la racine du zip, ou dans un unique sous-dossier).
+      </div>
+
+      <div class="install-progress" id="install-progress">
+        <span class="mini-spinner"></span> Installation en cours…
+      </div>
+      <div id="install-alert"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeInstallModal()">Annuler</button>
+      <button class="btn btn-primary" id="btn-install" onclick="submitInstall()" disabled>Installer</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="toast" id="toast">
+  <span class="toast-dot"></span>
+  <span id="toast-msg"></span>
+</div>
+
+
+<script>
+let selectedFile = null;
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openInstallModal() {
+  document.getElementById('install-modal-overlay').classList.add('open');
+}
+function closeInstallModal() {
+  document.getElementById('install-modal-overlay').classList.remove('open');
+  resetInstallForm();
+}
+function closeInstallModalOutside(e) {
+  if (e.target === document.getElementById('install-modal-overlay')) closeInstallModal();
+}
+function resetInstallForm() {
+  selectedFile = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('dropzone-filename').textContent = '';
+  document.getElementById('install-alert').innerHTML = '';
+  document.getElementById('install-progress').classList.remove('active');
+  document.getElementById('btn-install').disabled = true;
+}
+
+// ── Sélection de fichier ───────────────────────────────────────────────────────
+function onFileSelected(files) {
+  if (!files || !files.length) return;
+  const file = files[0];
+  if (!file.name.toLowerCase().endsWith('.zip')) {
+    showInstallAlert('Seuls les fichiers .zip sont acceptés', 'error');
+    return;
+  }
+  selectedFile = file;
+  document.getElementById('dropzone-filename').textContent = file.name;
+  document.getElementById('btn-install').disabled = false;
+  document.getElementById('install-alert').innerHTML = '';
+}
+
+const dropzone = document.getElementById('dropzone');
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  onFileSelected(e.dataTransfer.files);
+});
+
+function showInstallAlert(msg, type) {
+  document.getElementById('install-alert').innerHTML =
+    `<div class="install-alert ${type}">${type === 'error' ? '✕' : '✓'} ${msg}</div>`;
+}
+
+// ── Installation ───────────────────────────────────────────────────────────────
+async function submitInstall() {
+  if (!selectedFile) return;
+
+  const btn = document.getElementById('btn-install');
+  btn.disabled = true;
+  document.getElementById('install-progress').classList.add('active');
+  document.getElementById('install-alert').innerHTML = '';
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+
+  try {
+    const res = await fetch('/modules/install', {
+      method: 'POST',
+      credentials: 'same-origin',
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'installation');
+
+    showInstallAlert(`Module "${data.name}" ${data.action}`, 'success');
+    showToast(`Module "${data.name}" ${data.action}`, 'success');
+    setTimeout(() => location.reload(), 900);
+  } catch (e) {
+    showInstallAlert(e.message, 'error');
+    btn.disabled = false;
+  } finally {
+    document.getElementById('install-progress').classList.remove('active');
+  }
+}
+
+// ── Suppression ────────────────────────────────────────────────────────────────
+function askDelete(id) {
+  document.getElementById('del-confirm-' + id).classList.add('visible');
+  document.getElementById('del-btn-' + id).style.display = 'none';
+}
+function cancelDelete(id) {
+  document.getElementById('del-confirm-' + id).classList.remove('visible');
+  document.getElementById('del-btn-' + id).style.display = '';
+}
+async function confirmDelete(id, name) {
+  try {
+    const res = await fetch(`/modules/${id}`, { method: 'DELETE', credentials: 'same-origin' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+
+    const card = document.getElementById('mod-card-' + id);
+    card.style.opacity = '0';
+    card.style.transition = 'opacity .2s';
+    setTimeout(() => card.remove(), 200);
+
+    showToast(`Module "${name}" supprimé`, 'success');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── Vérification de version ───────────────────────────────────────────────────
+async function checkUpdate(id) {
+  const pill = document.getElementById('version-pill-' + id);
+  const originalText = pill.textContent;
+  pill.textContent = '…';
+
+  try {
+    const res = await fetch(`/modules/${id}/check-update`, { credentials: 'same-origin' });
+    const data = await res.json();
+
+    if (!data.checked) {
+      pill.textContent = originalText;
+      showToast(data.reason || 'Vérification impossible', 'error');
+      return;
+    }
+
+    if (data.update_available) {
+      pill.textContent = `v${data.local_version} → v${data.remote_version} disponible`;
+      pill.classList.add('update-available');
+      showToast(`Mise à jour disponible : v${data.remote_version}`, 'success');
+    } else {
+      pill.textContent = `v${data.local_version || data.remote_version} (à jour)`;
+      showToast('Module à jour', 'success');
+    }
+  } catch (e) {
+    pill.textContent = originalText;
+    showToast('Erreur de vérification', 'error');
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let _tt;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(_tt);
+  _tt = setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeInstallModal();
+});
+</script>
 
 {% endblock %}

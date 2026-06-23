@@ -49,6 +49,9 @@ def register():
         'username':        username,
         'password':        generate_password_hash(password),
         'encryption_key':  generate_user_key(),          # ← clé AES-256 unique
+        'display_name':    username,
+        'email':           '',
+        'disabled':        False,
         # Permissions minimales par défaut
         'modules':         [],
         'rapports_perm':   ['read'],
@@ -81,6 +84,9 @@ def login():
 
     if not user or not check_password_hash(user['password'], password):
         return jsonify({'error': 'invalid credentials'}), 401
+
+    if user.get('disabled'):
+        return jsonify({'error': 'account disabled'}), 403
 
     # Génère la clé si absente (migration users existants)
     if not user.get('encryption_key'):
@@ -143,3 +149,85 @@ def require_permission(resource: str, action: str):
             return f(*args, **kwargs)
         return decorated
     return decorator
+
+
+# ─── Gestion de profil personnel (tout user connecté, sur SON propre compte) ──
+
+def _safe_profile(u: dict) -> dict:
+    """Profil sans password ni encryption_key — pour affichage uniquement."""
+    return {
+        'id':           u['id'],
+        'username':     u['username'],
+        'display_name': u.get('display_name', u['username']),
+        'email':        u.get('email', ''),
+        'disabled':     u.get('disabled', False),
+    }
+
+
+@token_required
+def get_my_profile():
+    """GET /auth/me — profil du user connecté."""
+    users = load_users()
+    user  = next((u for u in users if str(u['id']) == str(request.current_user.get('sub'))), None)
+    if not user:
+        return jsonify({'error': 'user not found'}), 404
+    return jsonify(_safe_profile(user)), 200
+
+
+@token_required
+def update_my_profile():
+    """
+    PATCH /auth/me   Body JSON : { "display_name": "...", "email": "..." }
+    Un user ne peut modifier que son propre profil — aucune route ne permet
+    de cibler un autre id ici (la gestion des autres comptes passe par
+    /admin/users, réservée à users:write).
+    """
+    body  = request.get_json(silent=True) or {}
+    users = load_users()
+    user  = next((u for u in users if str(u['id']) == str(request.current_user.get('sub'))), None)
+    if not user:
+        return jsonify({'error': 'user not found'}), 404
+
+    if 'display_name' in body:
+        display_name = str(body['display_name']).strip()
+        if not display_name:
+            return jsonify({'error': 'display_name cannot be empty'}), 400
+        user['display_name'] = display_name
+
+    if 'email' in body:
+        user['email'] = str(body['email']).strip()
+
+    save_users(users)
+    return jsonify(_safe_profile(user)), 200
+
+
+@token_required
+def update_my_password():
+    """
+    POST /auth/me/password
+    Body JSON : { "current_password": "...", "new_password": "..." }
+    Vérifie le mot de passe actuel avant tout changement — un user ne
+    peut jamais changer son mot de passe sans le connaître (contrairement
+    à la réinitialisation admin, qui contourne volontairement cette
+    vérification puisque l'admin agit pour un compte qui n'est pas le sien).
+    """
+    body             = request.get_json(silent=True) or {}
+    current_password = body.get('current_password', '')
+    new_password     = body.get('new_password', '')
+
+    if not current_password or not new_password:
+        return jsonify({'error': 'current_password and new_password required'}), 400
+    if len(new_password) < 8:
+        return jsonify({'error': 'new_password must be at least 8 characters'}), 400
+
+    users = load_users()
+    user  = next((u for u in users if str(u['id']) == str(request.current_user.get('sub'))), None)
+    if not user:
+        return jsonify({'error': 'user not found'}), 404
+
+    if not check_password_hash(user['password'], current_password):
+        return jsonify({'error': 'current password is incorrect'}), 401
+
+    user['password'] = generate_password_hash(new_password)
+    save_users(users)
+    return jsonify({'ok': True}), 200

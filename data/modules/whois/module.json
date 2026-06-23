@@ -1,6 +1,8 @@
 {
     "id": "whois",
     "name": "Whois",
+    "version": "1.0.0",
+    "repository": "",
     "category": "Information Gathering",
     "description": "Whois est un outil de requête pour obtenir des informations sur les domaines et les adresses IP. Il permet de récupérer les détails du propriétaire, des administrateurs, des serveurs de noms et d'autres informations associées à un domaine ou une adresse IP.",
     "parameters": [

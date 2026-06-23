@@ -19,6 +19,7 @@
   }
   .user-card:hover { border-color: var(--border-hover, #3a3a3e); }
   .user-card.is-admin { border-color: rgba(0,229,160,.25); }
+  .user-card.is-disabled { opacity: .55; border-color: rgba(255,77,77,.2); }
 
   .user-card-header {
     display: flex;
@@ -65,6 +66,17 @@
     letter-spacing: .08em;
     text-transform: uppercase;
   }
+  .badge-disabled {
+    font-family: var(--font-mono);
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(255,77,77,.12);
+    border: 1px solid rgba(255,77,77,.3);
+    color: #ff4d4d;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
 
   .user-header-right {
     display: flex; align-items: center; gap: 10px;
@@ -95,7 +107,7 @@
   }
   .user-card.open .chevron { transform: rotate(180deg); }
 
-  /* ── Perms editor ── */
+  /* ── Body ── */
   .user-card-body {
     display: none;
     border-top: 1px solid var(--border);
@@ -103,11 +115,49 @@
   }
   .user-card.open .user-card-body { display: block; }
 
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* ── Profile fields ── */
+  .profile-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 8px;
+    margin-bottom: 18px;
+    align-items: end;
+  }
+  .field-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 7px 9px;
+    outline: none;
+  }
+  .field-input:focus { border-color: var(--accent); }
+  .field-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    display: block;
+  }
+
   .perms-table {
     width: 100%;
     border-collapse: collapse;
     font-family: var(--font-mono);
     font-size: 11px;
+    margin-bottom: 16px;
   }
   .perms-table th {
     font-size: 9px;
@@ -132,7 +182,6 @@
     white-space: nowrap;
   }
 
-  /* ── Checkboxes ── */
   .perm-checks {
     display: flex; gap: 16px; flex-wrap: wrap;
   }
@@ -149,7 +198,6 @@
   }
   .perm-check.checked { color: var(--text); }
 
-  /* ── Actions ── */
   .card-actions-row {
     display: flex;
     align-items: center;
@@ -157,9 +205,10 @@
     margin-top: 16px;
     padding-top: 14px;
     border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
-  /* ── Status indicators ── */
   .save-status {
     font-family: var(--font-mono);
     font-size: 10px;
@@ -170,7 +219,6 @@
   .save-status.ok    { color: var(--accent); }
   .save-status.error { color: #ff4d4d; }
 
-  /* ── Toast ── */
   .toast {
     position: fixed; bottom: 24px; right: 24px;
     background: var(--surface);
@@ -182,6 +230,7 @@
     z-index: 999;
     transform: translateY(150%);
     transition: transform .2s ease;
+    max-width: 360px;
   }
   .toast.show { transform: none; }
   .toast.success { border-color: var(--accent); }
@@ -190,20 +239,67 @@
   .toast.success .toast-dot { background: var(--accent); }
   .toast.error   .toast-dot { background: #ff4d4d; }
 
-  /* ── Empty state ── */
   .empty-state {
     padding: 60px; text-align: center;
     color: var(--muted); font-family: var(--font-mono); font-size: 12px;
     border: 1px dashed var(--border); border-radius: 4px;
   }
 
-  /* ── Confirm delete ── */
   .delete-confirm {
     display: none;
     align-items: center; gap: 8px;
     font-family: var(--font-mono); font-size: 11px; color: #ff4d4d;
   }
   .delete-confirm.visible { display: flex; }
+
+  /* ── Modal create user ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(4px);
+    z-index: 900;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 420px;
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-title {
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+  }
+  .modal-close {
+    background: none; border: none; color: var(--muted);
+    font-size: 18px; cursor: pointer; line-height: 1;
+  }
+  .modal-body { padding: 18px 20px; }
+  .modal-footer {
+    padding: 14px 20px; border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+
+  /* ── Reset password result ── */
+  .reset-result {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(0,229,160,.08);
+    border: 1px solid rgba(0,229,160,.25);
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+  }
 </style>
 
 
@@ -211,29 +307,30 @@
 <div class="page-header">
   <div>
     <div class="page-title">Utilisateurs</div>
-    <div class="page-sub">{{ users | length }} compte{{ 's' if users | length != 1 }} enregistré{{ 's' if users | length != 1 }}</div>
+    <div class="page-sub" id="user-count">{{ users | length }} compte{{ 's' if users | length != 1 }} enregistré{{ 's' if users | length != 1 }}</div>
   </div>
+  <button class="btn btn-primary" onclick="openCreateModal()">+ Créer un compte</button>
 </div>
 
 
 {% if users %}
-<div class="users-grid">
+<div class="users-grid" id="users-grid">
   {% for user in users %}
   {% set is_admin = '*' in user.get('users_perm', []) or '*' in user.get('modules', []) %}
-  <div class="user-card {% if is_admin %}is-admin{% endif %}" id="card-{{ user.id }}">
+  {% set is_disabled = user.get('disabled', False) %}
+  <div class="user-card {% if is_admin %}is-admin{% endif %} {% if is_disabled %}is-disabled{% endif %}" id="card-{{ user.id }}">
 
-    <!-- Header (cliquable) -->
     <div class="user-card-header" onclick="toggleCard({{ user.id }})">
       <div class="user-avatar">{{ user.username[:2].upper() }}</div>
       <div class="user-info">
         <div class="user-name">
-          {{ user.username }}
+          {{ user.display_name or user.username }}
           {% if is_admin %}<span class="badge-admin">admin</span>{% endif %}
+          {% if is_disabled %}<span class="badge-disabled" id="disabled-badge-{{ user.id }}">bloqué</span>{% endif %}
         </div>
-        <div class="user-id">id: {{ user.id }}</div>
+        <div class="user-id">{{ user.username }} · id: {{ user.id }}</div>
       </div>
 
-      <!-- Résumé des permissions actives -->
       <div class="perm-pills">
         {% for res, field in perm_fields.items() %}
           {% set perms = user.get(field, []) %}
@@ -256,14 +353,29 @@
       </div>
     </div>
 
-    <!-- Body : éditeur de permissions -->
     <div class="user-card-body">
+
+      <!-- Profil -->
+      <div class="section-label">Profil</div>
+      <div class="profile-row">
+        <div>
+          <label class="field-label">Nom d'affichage</label>
+          <input class="field-input" id="display-name-{{ user.id }}" value="{{ user.display_name or user.username }}">
+        </div>
+        <div>
+          <label class="field-label">Email</label>
+          <input class="field-input" id="email-{{ user.id }}" value="{{ user.email or '' }}" placeholder="(optionnel)">
+        </div>
+        <button class="btn btn-ghost" style="font-size:11px;padding:7px 12px" onclick="saveProfile({{ user.id }})">
+          Enregistrer
+        </button>
+      </div>
+
+      <!-- Permissions -->
+      <div class="section-label">Permissions</div>
       <table class="perms-table">
         <thead>
-          <tr>
-            <th>Ressource</th>
-            <th>Permissions</th>
-          </tr>
+          <tr><th>Ressource</th><th>Permissions</th></tr>
         </thead>
         <tbody>
           {% for res, available in all_perms.items() %}
@@ -291,12 +403,32 @@
         </tbody>
       </table>
 
+      <!-- Réinitialisation mot de passe -->
+      <div class="section-label">Mot de passe</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="resetPassword({{ user.id }}, '{{ user.username }}')">
+          Réinitialiser (génère un mot de passe temporaire)
+        </button>
+      </div>
+      <div id="reset-result-{{ user.id }}"></div>
+
       <!-- Actions -->
       <div class="card-actions-row">
         <div class="save-status" id="status-{{ user.id }}"></div>
 
-        <div style="display:flex;align-items:center;gap:8px">
-          <!-- Confirmation suppression -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          {% if is_disabled %}
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;color:var(--accent)"
+                  onclick="toggleEnabled({{ user.id }}, false)">
+            ✓ Débloquer
+          </button>
+          {% else %}
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;color:#f5a623"
+                  onclick="toggleEnabled({{ user.id }}, true)">
+            ⊘ Bloquer
+          </button>
+          {% endif %}
+
           <div class="delete-confirm" id="del-confirm-{{ user.id }}">
             Supprimer {{ user.username }} ?
             <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
@@ -313,7 +445,7 @@
 
           <button class="btn btn-primary" style="font-size:11px;padding:5px 14px"
                   onclick="savePerms({{ user.id }})">
-            Enregistrer
+            Enregistrer permissions
           </button>
         </div>
       </div>
@@ -328,6 +460,36 @@
 {% endif %}
 
 
+<!-- ══ MODAL : Créer un compte ══ -->
+<div class="modal-overlay" id="create-modal-overlay" onclick="closeCreateModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">// Nouveau compte</span>
+      <button class="modal-close" onclick="closeCreateModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="create-alert"></div>
+      <div style="margin-bottom:12px">
+        <label class="field-label">Identifiant</label>
+        <input class="field-input" id="new-username" placeholder="ex: bob">
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="field-label">Nom d'affichage</label>
+        <input class="field-input" id="new-display-name" placeholder="(optionnel — par défaut = identifiant)">
+      </div>
+      <div style="margin-bottom:0">
+        <label class="field-label">Mot de passe</label>
+        <input class="field-input" type="password" id="new-password" placeholder="min. 8 caractères">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCreateModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="submitCreateUser()">Créer</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- Toast -->
 <div class="toast" id="toast">
   <span class="toast-dot"></span>
@@ -338,11 +500,41 @@
 <script>
 // ── Toggle card ───────────────────────────────────────────────────────────────
 function toggleCard(id) {
-  const card = document.getElementById('card-' + id);
-  card.classList.toggle('open');
+  document.getElementById('card-' + id).classList.toggle('open');
 }
 
-// ── Collect perms for a user ──────────────────────────────────────────────────
+// ── Profil ────────────────────────────────────────────────────────────────────
+async function saveProfile(userId) {
+  const display_name = document.getElementById('display-name-' + userId).value.trim();
+  const email = document.getElementById('email-' + userId).value.trim();
+
+  if (!display_name) return showToast('Le nom d\'affichage ne peut pas être vide', 'error');
+
+  try {
+    const res = await fetch(`/admin/users/${userId}/profile`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ display_name, email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+
+    // Met à jour le nom affiché dans le header de la carte
+    const card = document.getElementById('card-' + userId);
+    const nameEl = card.querySelector('.user-name');
+    const adminBadge = nameEl.querySelector('.badge-admin');
+    const disabledBadge = nameEl.querySelector('.badge-disabled');
+    nameEl.innerHTML = display_name +
+      (adminBadge ? adminBadge.outerHTML : '') +
+      (disabledBadge ? disabledBadge.outerHTML : '');
+
+    showToast('Profil mis à jour', 'success');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── Permissions ───────────────────────────────────────────────────────────────
 function collectPerms(userId) {
   const checkboxes = document.querySelectorAll(`input[data-user="${userId}"]`);
   const perms = {};
@@ -356,10 +548,7 @@ function collectPerms(userId) {
 }
 
 function onPermChange(userId) {
-  // Logique mutuellement exclusive : si "*" coché → décoche les autres, et vice versa
   const checkboxes = document.querySelectorAll(`input[data-user="${userId}"]`);
-  
-  // Groupe par ressource
   const groups = {};
   checkboxes.forEach(cb => {
     if (!groups[cb.dataset.res]) groups[cb.dataset.res] = [];
@@ -371,12 +560,10 @@ function onPermChange(userId) {
     const othersCbs = cbs.filter(c => c.dataset.perm !== '*');
     if (!starCb) return;
 
-    // Si * vient d'être coché → décoche les autres
     if (starCb.checked) {
       othersCbs.forEach(c => { c.checked = false; c.closest('label').classList.remove('checked'); });
       starCb.closest('label').classList.add('checked');
     } else {
-      // Si un autre vient d'être coché → décoche *
       othersCbs.forEach(c => {
         c.closest('label').classList.toggle('checked', c.checked);
       });
@@ -387,17 +574,15 @@ function onPermChange(userId) {
   setStatus(userId, '');
 }
 
-// ── Save ──────────────────────────────────────────────────────────────────────
 async function savePerms(userId) {
   const perms = collectPerms(userId);
   setStatus(userId, '…');
 
   try {
     const res  = await fetch(`/admin/users/${userId}/perms`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers:     { 'Content-Type': 'application/json' },
-      body:        JSON.stringify(perms),
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(perms),
     });
     const data = await res.json();
 
@@ -406,8 +591,7 @@ async function savePerms(userId) {
       showToast(data.error || 'Erreur lors de la sauvegarde', 'error');
     } else {
       setStatus(userId, '✓ Sauvegardé', 'ok');
-      showToast(`Permissions de ${data.username || 'l\'utilisateur'} mises à jour`, 'success');
-      // Met à jour les pills dans le header
+      showToast(`Permissions mises à jour`, 'success');
       updatePills(userId, perms);
     }
   } catch {
@@ -422,7 +606,6 @@ function setStatus(userId, msg, type = '') {
   el.className   = 'save-status ' + type;
 }
 
-// ── Update pills in header ────────────────────────────────────────────────────
 function updatePills(userId, perms) {
   const card = document.getElementById('card-' + userId);
   const pillsContainer = card.querySelector('.perm-pills');
@@ -430,15 +613,60 @@ function updatePills(userId, perms) {
 
   pillsContainer.innerHTML = Object.entries(perms).map(([res, vals]) => {
     if (!vals.length) return '';
-    if (vals.includes('*'))                    return `<span class="perm-pill full">${res}:*</span>`;
-    if (vals.includes('read') && vals.includes('write')) return `<span class="perm-pill write">${res}:rw</span>`;
-    if (vals.includes('read'))                 return `<span class="perm-pill read">${res}:r</span>`;
-    if (vals.includes('write'))                return `<span class="perm-pill write">${res}:w</span>`;
+    if (vals.includes('*'))                              return `<span class="perm-pill full">${res}:*</span>`;
+    if (vals.includes('read') && vals.includes('write'))  return `<span class="perm-pill write">${res}:rw</span>`;
+    if (vals.includes('read'))                            return `<span class="perm-pill read">${res}:r</span>`;
+    if (vals.includes('write'))                           return `<span class="perm-pill write">${res}:w</span>`;
     return '';
   }).join('');
 }
 
-// ── Delete ────────────────────────────────────────────────────────────────────
+// ── Blocage / déblocage ───────────────────────────────────────────────────────
+async function toggleEnabled(userId, disable) {
+  const endpoint = disable ? 'disable' : 'enable';
+  try {
+    const res = await fetch(`/admin/users/${userId}/${endpoint}`, {
+      method: 'POST', credentials: 'same-origin',
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+
+    showToast(disable ? 'Compte bloqué' : 'Compte débloqué', 'success');
+    // Recharge la page pour refléter proprement is-disabled / badges / bouton inverse
+    location.reload();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── Réinitialisation mot de passe ─────────────────────────────────────────────
+async function resetPassword(userId, username) {
+  if (!confirm(`Réinitialiser le mot de passe de ${username} ? Un mot de passe temporaire sera généré.`)) return;
+
+  try {
+    const res = await fetch(`/admin/users/${userId}/reset-password`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+
+    const resultEl = document.getElementById('reset-result-' + userId);
+    if (data.generated_password) {
+      resultEl.innerHTML = `<div class="reset-result">
+        Mot de passe temporaire pour <strong>${username}</strong> :
+        <code style="user-select:all">${data.generated_password}</code><br>
+        Communiquez-le immédiatement — il ne sera plus jamais affiché.
+      </div>`;
+    }
+    showToast('Mot de passe réinitialisé', 'success');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── Suppression ────────────────────────────────────────────────────────────────
 function askDelete(userId) {
   document.getElementById('del-confirm-' + userId).classList.add('visible');
   document.getElementById('del-btn-' + userId).style.display = 'none';
@@ -455,7 +683,6 @@ async function confirmDelete(userId, username) {
     const data = await res.json();
     if (!res.ok) return showToast(data.error || 'Erreur', 'error');
 
-    // Retire la carte du DOM
     const card = document.getElementById('card-' + userId);
     card.style.opacity = '0';
     card.style.transition = 'opacity .2s';
@@ -463,14 +690,61 @@ async function confirmDelete(userId, username) {
 
     showToast(`${username} supprimé`, 'success');
 
-    // Met à jour le sous-titre
-    const sub = document.querySelector('.page-sub');
+    const sub = document.getElementById('user-count');
     if (sub) {
       const n = document.querySelectorAll('.user-card').length;
       sub.textContent = `${n} compte${n > 1 ? 's' : ''} enregistré${n > 1 ? 's' : ''}`;
     }
   } catch {
     showToast('API inaccessible', 'error');
+  }
+}
+
+// ── Création de compte ────────────────────────────────────────────────────────
+function openCreateModal() {
+  document.getElementById('create-modal-overlay').classList.add('open');
+  document.getElementById('new-username').focus();
+}
+function closeCreateModal() {
+  document.getElementById('create-modal-overlay').classList.remove('open');
+  document.getElementById('create-alert').innerHTML = '';
+  document.getElementById('new-username').value = '';
+  document.getElementById('new-display-name').value = '';
+  document.getElementById('new-password').value = '';
+}
+function closeCreateModalOutside(e) {
+  if (e.target === document.getElementById('create-modal-overlay')) closeCreateModal();
+}
+
+async function submitCreateUser() {
+  const username = document.getElementById('new-username').value.trim();
+  const display_name = document.getElementById('new-display-name').value.trim();
+  const password = document.getElementById('new-password').value;
+  const alertEl = document.getElementById('create-alert');
+
+  if (!username || !password) {
+    alertEl.innerHTML = '<div class="account-alert error" style="padding:8px 10px;font-family:var(--font-mono);font-size:11px;color:#ff4d4d;background:rgba(255,77,77,.08);border:1px solid rgba(255,77,77,.25);border-radius:3px;margin-bottom:10px">Identifiant et mot de passe requis</div>';
+    return;
+  }
+  if (password.length < 8) {
+    alertEl.innerHTML = '<div style="padding:8px 10px;font-family:var(--font-mono);font-size:11px;color:#ff4d4d;background:rgba(255,77,77,.08);border:1px solid rgba(255,77,77,.25);border-radius:3px;margin-bottom:10px">Mot de passe trop court (min. 8 caractères)</div>';
+    return;
+  }
+
+  try {
+    const res = await fetch('/admin/users', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, display_name, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+
+    showToast(`Compte ${username} créé`, 'success');
+    closeCreateModal();
+    location.reload();
+  } catch (e) {
+    alertEl.innerHTML = `<div style="padding:8px 10px;font-family:var(--font-mono);font-size:11px;color:#ff4d4d;background:rgba(255,77,77,.08);border:1px solid rgba(255,77,77,.25);border-radius:3px;margin-bottom:10px">${e.message}</div>`;
   }
 }
 
@@ -481,8 +755,12 @@ function showToast(msg, type = 'success') {
   document.getElementById('toast-msg').textContent = msg;
   t.className = `toast ${type} show`;
   clearTimeout(_tt);
-  _tt = setTimeout(() => t.classList.remove('show'), 3500);
+  _tt = setTimeout(() => t.classList.remove('show'), 4000);
 }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeCreateModal();
+});
 </script>
 
 {% endblock %}

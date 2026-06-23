@@ -6,6 +6,8 @@ from src.WebUI.reports import register_reports_routes
 from src.WebUI.auth import register_auth_routes, login_required
 from src.WebUI.proxy import proxy_bp
 from src.WebUI.admin import admin_bp as webui_admin_bp
+from src.WebUI.account import account_bp
+from src.WebUI.modules import modules_bp
 from flask import Flask, redirect, render_template, request, url_for, g, jsonify
 import logging
 from flask_cors import CORS
@@ -40,6 +42,8 @@ app.register_blueprint(mission_detail_bp)
 app.register_blueprint(resources_bp)
 app.register_blueprint(proxy_bp)
 app.register_blueprint(webui_admin_bp)
+app.register_blueprint(account_bp)
+app.register_blueprint(modules_bp)
 
 variables = {
     'WEB_SERVER_HOST': WEB_SERVER_HOST,
@@ -271,10 +275,8 @@ def missions():
     return render_template('missions.html', live_missions_json=live_missions, **variables)
 
 
-@app.route('/modules')
-@login_required
-def modules():
-    return render_template('modules.html', **variables)
+# Route /modules retirée — remplacée par le blueprint modules_bp
+# (src/WebUI/modules.py), qui gère aussi l'upload/suppression de modules.
 
 
 @app.route('/run/<workflow_id>', methods=['GET', 'POST'])

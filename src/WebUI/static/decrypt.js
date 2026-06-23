@@ -67,8 +67,21 @@ const ArgosDecrypt = (() => {
 
   // ── Déchiffrement ─────────────────────────────────────────────────────────
 
+  /**
+   * Déchiffre un payload reçu de l'API.
+   *
+   * SÉCURITÉ — point critique : on utilise payload.enc_key, PAS la clé
+   * du current_user lue depuis le meta-tag. L'API a déjà résolu la bonne
+   * clé à utiliser selon les règles d'accès :
+   *   - si le current_user est owner du fichier → sa propre clé
+   *   - si le current_user a la permission '*' sur la ressource mais
+   *     n'est pas owner → la clé EMPRUNTÉE de l'owner réel
+   * Utiliser systématiquement la clé du meta-tag cassait silencieusement
+   * le déchiffrement de tout fichier appartenant à un autre utilisateur,
+   * même avec les permissions '*' correctement accordées côté API.
+   */
   async function _decrypt(payload) {
-    const b64Key = _getEncKey();
+    const b64Key = payload.enc_key || _getEncKey();
     if (!b64Key) throw new Error('Clé de chiffrement indisponible');
 
     const key        = await _importDecryptKey(b64Key);
@@ -170,12 +183,38 @@ const ArgosDecrypt = (() => {
       const ext  = original.slice(dot + 1).toLowerCase();
       if (ext !== 'html' && ext !== 'pdf') continue;
 
-      if (!grouped[base]) grouped[base] = { id: base, html_file: null, pdf_file: null };
+      if (!grouped[base]) {
+        grouped[base] = {
+          id:             base,
+          html_file:      null,
+          pdf_file:       null,
+          owner_username: f.owner_username || null,
+          mission_name:   f.mission_name || null,
+          mtime:          0,
+        };
+      }
       grouped[base][`${ext}_file`] = f.name;
+      // html et pdf partagent le même owner/mission_name (créés ensemble) ;
+      // on garde la première valeur non nulle rencontrée pour chacun.
+      if (!grouped[base].owner_username) grouped[base].owner_username = f.owner_username || null;
+      if (!grouped[base].mission_name)   grouped[base].mission_name   = f.mission_name || null;
+      // Garde le mtime le plus récent entre les deux fichiers du rapport
+      if (f.mtime && f.mtime > grouped[base].mtime) grouped[base].mtime = f.mtime;
     }
 
-    return Object.values(grouped).sort((a, b) => b.id.localeCompare(a.id));
+    return Object.values(grouped)
+      .map(r => ({ ...r, generated: _formatReportDate(r.mtime) }))
+      .sort((a, b) => b.mtime - a.mtime);
   }
+
+  /** Formate un timestamp Unix (secondes, comme renvoyé par Python) en date lisible. */
+  function _formatReportDate(mtime) {
+    if (!mtime) return '—';
+    const d = new Date(mtime * 1000);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   async function listWorkflows()              { return _proxyGet('/proxy/files/workflows'); }
 
 
@@ -189,7 +228,7 @@ const ArgosDecrypt = (() => {
   /**
    * Récupère et déchiffre un rapport (HTML ou PDF).
    *
-   * SÉCURITÉ/FORMAT : côté serveur (report_engine.py), le contenu HTML
+   * SÉCURITÉ/FORMAT : côté serveur (report.py), le contenu HTML
    * est chiffré directement (texte → bytes UTF-8 → AES-GCM), mais le PDF
    * étant binaire et JSON ne transportant que du texte, il est d'abord
    * encodé en base64 PUIS chiffré. Donc après _decrypt(), un rapport PDF

@@ -7,7 +7,7 @@ Ce module est la SEULE partie du WebUI Python autorisée à déchiffrer du
 contenu en clair. Il est utilisé exclusivement pour reconstruire les
 registres en mémoire process (WORKFLOWS_REGISTERY, MISSIONS_REGISTERY)
 nécessaires au moteur d'exécution (Workflow.run, Mission.execute,
-report_engine), qui ont besoin d'objets Python concrets et non de JSON
+report.py), qui ont besoin d'objets Python concrets et non de JSON
 chiffré.
 
 Conditions d'utilisation strictes :

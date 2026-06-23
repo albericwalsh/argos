@@ -1,4 +1,5 @@
 from src.core.command import command
+from src.core.cli_colors import muted, accent_bold
 from src.variables import COMMANDS_REGISTERY
 
 class HelpCommand(command):
@@ -12,9 +13,8 @@ class HelpCommand(command):
         self.commands = COMMANDS_REGISTERY
 
     def show_help(self, *args):
-        help_text = "Commandes disponibles :\n"
+        print(muted("Commandes disponibles :"))
         for cmd in self.commands:
-            help_text += f"- {cmd.name} : {cmd.description}\n"
-            
-        help_text += "\nTapez 'exit' ou 'quit' pour quitter le CLI."
-        print(help_text) 
+            print(f"- {accent_bold(cmd.name)} : {cmd.description}")
+
+        print(muted("\nTapez 'exit' ou 'quit' pour quitter le CLI."))

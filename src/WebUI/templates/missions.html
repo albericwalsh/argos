@@ -16,10 +16,10 @@
   <div class="card-body" style="padding:0">
     <table class="data-table">
       <thead><tr>
-        <th>ID</th><th>Nom</th><th>Workflow</th><th>Statut</th><th>Créée</th><th>Durée</th><th></th>
+        <th>ID</th><th>Nom</th><th>Workflow</th><th>Créé par</th><th>Statut</th><th>Créée</th><th>Durée</th><th></th>
       </tr></thead>
       <tbody id="missions-tbody">
-        <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">
+        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">
           <span class="mini-spinner"></span> Déchiffrement de l'historique…
         </td></tr>
       </tbody>
@@ -71,11 +71,15 @@ function renderRow(m) {
   const cleanId = (m.id || '').replace('#', '');
   const canReport = m.status === 'completed';
   const folderParam = m._mission_folder ? `?folder=${encodeURIComponent(m._mission_folder)}` : '';
+  // Les missions encore en mémoire de session (LIVE_MISSIONS) n'ont pas
+  // d'owner_username injecté par le listing API ; on retombe sur "—".
+  const ownerLabel = m._owner_username || '—';
   return `
     <tr data-clickable onclick="window.location='/missions/${cleanId}${folderParam}'">
       <td class="mono">${m.id}</td>
       <td>${m.name}</td>
       <td class="mono">${m.workflow}</td>
+      <td class="dim">${ownerLabel}</td>
       <td>${badgeFor(m.status)}</td>
       <td class="dim">${fmtDate(m.date_created)}</td>
       <td class="dim">${fmtDuration(m)}</td>
@@ -153,6 +157,10 @@ async function loadMissionHistory() {
           // avoir un rapport généré).
           data._mission_folder = missionFolder;
           data._mission_file   = f.name;
+          // f vient du listing /proxy/files/missions et contient déjà
+          // owner_username (résolu côté API depuis owner_id — info de
+          // traçabilité non sensible) ; on l'attache pour l'affichage.
+          data._owner_username = f.owner_username || null;
           if (!liveIds.has(data.id)) history.push(data);
         } catch (e) {
           console.error(`Échec déchiffrement ${missionFolder}/${f.name}`, e);
@@ -160,7 +168,7 @@ async function loadMissionHistory() {
       }
     }
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:#ff4d4d">
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:#ff4d4d">
       Erreur de chargement : ${e.message}</td></tr>`;
     return;
   }
@@ -169,7 +177,7 @@ async function loadMissionHistory() {
   document.getElementById('mission-count').textContent = all.length;
 
   if (all.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">
       Aucune mission enregistrée</td></tr>`;
     return;
   }
