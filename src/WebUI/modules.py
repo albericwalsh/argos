@@ -16,6 +16,7 @@ d'application, pas des données utilisateur), cohérent avec le traitement
 déjà appliqué à data/modules dans report.py.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 import os
 import re
 import shutil
@@ -29,6 +30,8 @@ from src.WebUI.auth import login_required
 from src.variables import APP_DIR, MODULES_REGISTERY, WORKFLOWS_REGISTERY
 from src.core.module_loader import reload_modules_registery
 from functools import wraps
+
+from src.utils import fetch_remote_module_json
 
 modules_bp = Blueprint("modules_ui", __name__, url_prefix="/modules")
 
@@ -128,12 +131,48 @@ def _find_module_json_root(extracted_dir: str) -> str | None:
 
     return None
 
+def _check_module_update_logic(mod):
+    if mod is None:
+        return {"checked": False, "reason": "Module introuvable"}
+
+    if not mod.repository:
+        return {"checked": False, "reason": "Aucun repository défini pour ce module"}
+
+    try:
+        remote_meta = fetch_remote_module_json(mod.repository)
+    except Exception as e:
+        return {"checked": False, "reason": str(e)}
+
+    remote_version = str(remote_meta.get("version", "")).strip()
+    local_version = str(mod.version or "").strip()
+
+    if not remote_version:
+        return {"checked": False, "reason": "Pas de version distante"}
+
+    return {
+        "checked": True,
+        "local_version": local_version or None,
+        "remote_version": remote_version,
+        "update_available": bool(local_version) and remote_version != local_version,
+    }
+
+def check_module_update(mod):
+    try:
+        return _check_module_update_logic(mod)
+    except Exception:
+        return {"checked": False, "reason": "Erreur interne"}
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
 @modules_bp.route("")
 @login_required
 def modules_page():
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        updates = list(executor.map(_check_module_update_logic, MODULES_REGISTERY))
+
+    for mod, result in zip(MODULES_REGISTERY, updates):
+        mod.checked = result
+
     return render_template("modules.html", **_variables())
 
 
@@ -239,32 +278,4 @@ def check_update(module_id: str):
     rien, l'installation/mise à jour reste manuelle via /modules/install.
     """
     mod = next((m for m in MODULES_REGISTERY if m.id == module_id), None)
-    if mod is None:
-        return jsonify({"error": f"Module '{module_id}' introuvable"}), 404
-
-    if not mod.repository:
-        return jsonify({"checked": False, "reason": "Aucun repository défini pour ce module"})
-
-    try:
-        resp = requests.get(mod.repository, timeout=8)
-        resp.raise_for_status()
-        remote_meta = resp.json()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"checked": False, "reason": f"Repository inaccessible : {e}"})
-    except ValueError:
-        return jsonify({"checked": False, "reason": "Réponse du repository invalide (pas un JSON)"})
-
-    remote_version = str(remote_meta.get("version", "")).strip()
-    local_version  = str(mod.version or "").strip()
-
-    if not remote_version:
-        return jsonify({"checked": False, "reason": "Le repository ne définit pas de champ 'version'"})
-
-    update_available = bool(local_version) and remote_version != local_version
-
-    return jsonify({
-        "checked":           True,
-        "local_version":     local_version or None,
-        "remote_version":    remote_version,
-        "update_available":  update_available,
-    })
+    return jsonify(_check_module_update_logic(mod))

@@ -392,6 +392,37 @@ async function checkUpdate(id) {
   }
 }
 
+async function checkUpdateAuto(id) {
+  const pill = document.getElementById('version-pill-' + id);
+  if (!pill) return;
+
+  const originalText = pill.textContent;
+
+  try {
+    pill.textContent = 'vérif…';
+
+    const res = await fetch(`/modules/${id}/check-update`, {
+      credentials: 'same-origin'
+    });
+
+    const data = await res.json();
+
+    if (!data.checked) {
+      pill.textContent = originalText;
+      return;
+    }
+
+    if (data.update_available) {
+      pill.textContent = `v${data.local_version} → v${data.remote_version}`;
+      pill.classList.add('update-available');
+    } else {
+      pill.textContent = `v${data.local_version || data.remote_version} (OK)`;
+    }
+
+  } catch (e) {
+    pill.textContent = originalText;
+  }
+}
 // ── Toast ─────────────────────────────────────────────────────────────────────
 let _tt;
 function showToast(msg, type = 'success') {
@@ -404,6 +435,16 @@ function showToast(msg, type = 'success') {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeInstallModal();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const modules = [...document.querySelectorAll('[id^="mod-card-"]')]
+    .map(el => el.id.replace('mod-card-', ''));
+
+  modules.forEach((id, index) => {
+    // petit delay pour éviter burst réseau
+    setTimeout(() => checkUpdateAuto(id), index * 150);
+  });
 });
 </script>
 

@@ -2,7 +2,7 @@
     "id": "vuln_lookup",
     "name": "Vulnerability Lookup",
     "version": "1.0",
-    "repository": "",
+    "repository": "https://github.com/albericwalsh/argos-vuln_lookup",
     "category": "Vulnerability Assessment",
     "description": "Interroge l'API NVD (National Vulnerability Database) pour trouver les CVEs associées aux services et versions détectés par Nmap.",
     "parameters": [

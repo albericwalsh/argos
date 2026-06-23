@@ -1,5 +1,8 @@
 import json
+import os
+import requests
 import yaml
+
 
 
 def open_file(file_path, mode='r'):
@@ -56,3 +59,54 @@ def create_file(file_path, content):
     except Exception as e:
         print(f"Error while creating file '{file_path}': {e}")
         raise
+
+def fetch_remote_module_json(repo_url: str, branch: str = "main"):
+    repo_url = repo_url.rstrip("/")
+
+    parts = repo_url.split("/")
+
+    if len(parts) < 2:
+        raise ValueError("URL de dépôt invalide")
+
+    user = parts[-2]
+    repo = parts[-1]
+
+    url = (
+        f"https://raw.githubusercontent.com/"
+        f"{user}/{repo}/{branch}/module.json"
+    )
+
+    try:
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        return resp.json()
+
+    except requests.RequestException as e:
+        raise RuntimeError(
+            f"Impossible de récupérer module.json depuis {url}: {e}"
+        )
+
+def fetch_remote_app_properties(repo_url: str, branch: str = "main"):
+    repo_url = repo_url.rstrip("/")
+    parts = repo_url.split("/")
+
+    if len(parts) < 2:
+        raise ValueError("URL de dépôt invalide")
+
+    user = parts[-2]
+    repo = parts[-1]
+
+    url = (
+        f"https://raw.githubusercontent.com/"
+        f"{user}/{repo}/{branch}/argos.properties"
+    )
+
+    try:
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        return resp.text   # ✅ IMPORTANT
+
+    except requests.RequestException as e:
+        raise RuntimeError(
+            f"Impossible de récupérer argos.properties depuis {url}: {e}"
+        )

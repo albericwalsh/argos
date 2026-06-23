@@ -20,6 +20,7 @@ from src.variables import (
 )
 from src.WebUI.mission_detail import bp as mission_detail_bp
 from src.WebUI.resources import bp as resources_bp
+from src.update import APP_VERSION_UPDATE, check_app_update
 
 app = Flask(APP_NAME,
             template_folder=os.path.join(APP_DIR, 'src/WebUI/templates'),
@@ -45,11 +46,16 @@ app.register_blueprint(webui_admin_bp)
 app.register_blueprint(account_bp)
 app.register_blueprint(modules_bp)
 
+if APP_VERSION_UPDATE :
+    version = APP_VERSION_UPDATE
+else:
+    version = APP_VERSION
+
 variables = {
     'WEB_SERVER_HOST': WEB_SERVER_HOST,
     'WEB_SERVER_PORT': WEB_SERVER_PORT,
     'APP_NAME':        APP_NAME,
-    'APP_VERSION':     APP_VERSION,
+    'APP_VERSION':     version,
     'APP_DESCRIPTION': APP_DESCRIPTION,
     'APP_AUTHOR':      APP_AUTHOR,
     'APP_LICENSE':     APP_LICENSE,
@@ -379,4 +385,6 @@ def start_web_server():
     devnull.close()
 
     print(f"[WebUI] Server started on http://{WEB_SERVER_HOST}:{WEB_SERVER_PORT}")
+
+    check_app_update()
     return True

@@ -2,7 +2,7 @@
     "id": "hydra",
     "name": "Hydra",
     "version": "1.0",
-    "repository": "",
+    "repository": "https://github.com/albericwalsh/argos-hydra",
     "category": "Brute Force",
     "description": "THC-Hydra est un outil de brute-force de credentials réseau supportant de nombreux protocoles (SSH, FTP, HTTP(S), MySQL, RDP, SMB, etc.). Il teste des combinaisons login/mot de passe contre un service cible pour identifier des authentifications faibles ou par défaut.",
     "parameters": [

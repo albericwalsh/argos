@@ -2,7 +2,7 @@
     "id": "spiderfoot",
     "name": "SpiderFoot",
     "version": "1.0",
-    "repository": "",
+    "repository": "https://github.com/albericwalsh/argos-spiderfoot",
     "category": "Intelligence Gathering",
     "description": "SpiderFoot est un outil d'exploration de l'Internet utilisé pour collecter des informations sur une cible donnée. Il permet de découvrir des informations sensibles telles que les adresses IP, les noms de domaine, les comptes sur les réseaux sociaux, etc.",
     "parameters": [

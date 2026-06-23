@@ -2,7 +2,7 @@
     "id": "paramspider",
     "name": "ParamSpider",
     "version": "1.0.0",
-    "repository": "https://github.com/paramspider/paramspider",
+    "repository": "https://github.com/albericwalsh/argos-paramspider",
     "category": "Reconnaissance",
     "description": "ParamSpider extrait les paramètres d'URL historiques d'un domaine en interrogeant les archives web (Wayback Machine). Utile pour découvrir des points d'entrée potentiellement vulnérables (injection, redirection ouverte, XSS) sans envoyer de requêtes directes à la cible.",
     "parameters": [

@@ -2,7 +2,7 @@
     "id": "sqlmap",
     "name": "SQLMap",
     "version": "1.0",
-    "repository": "",
+    "repository": "https://github.com/albericwalsh/argos-sqlmap",
     "category": "Exploitation",
     "description": "Détecte et exploite automatiquement les injections SQL. Teste les URLs découvertes par ffuf et les services de base de données détectés par nmap.",
     "parameters": [
